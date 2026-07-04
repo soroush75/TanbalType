@@ -1,0 +1,14 @@
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\bin\Release\net8.0-windows\TanbalType.exe
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\bin\Release\net8.0-windows\TanbalType.deps.json
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\bin\Release\net8.0-windows\TanbalType.runtimeconfig.json
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\bin\Release\net8.0-windows\TanbalType.dll
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\bin\Release\net8.0-windows\TanbalType.pdb
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.AssemblyInfoInputs.cache
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.AssemblyInfo.cs
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.csproj.CoreCompileInputs.cache
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.dll
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\refint\TanbalType.dll
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.pdb
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.genruntimeconfig.cache
+C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\ref\TanbalType.dll
