@@ -4,17 +4,29 @@ namespace TanbalType;
 internal static class DetectorSelfTest
 {
     private static readonly string[] EnglishOnFaLayout =
+        // «id» عمداً در لیست نیست: روی حالت فارسی «هی» می‌شود که خودش کلمهٔ فارسی معتبری است
         ["hello", "book", "world", "class", "please", "computer", "good", "test", "name", "google",
-         "login", "dashboard", "database", "application", "fararu.com", "app", "id", "api"];
+         "login", "dashboard", "database", "application", "fararu.com", "app", "api",
+         // نام سایت‌ها و کلمات محاوره‌ای که روی حالت فارسی تایپ شده‌اند
+         "digikala", "youtube", "instagram", "aparat", "www.digikala.com", "salam", "mamnoon"];
 
     private static readonly string[] PersianOnEnLayout =
-        ["sghl", "ldo,hil", "vh", "fhc", ";vnd", "ffdkd", "ldai", "kldai", "dh", "fh", "hc"];
+        ["sghl", "ldo,hil", "vh", "fhc", ";vnd", "ffdkd", "ldai", "kldai", "dh", "fh", "hc",
+         // کلمات محاوره‌ای فارسی که روی حالت انگلیسی تایپ شده‌اند
+         "]x,vd" /* چطوری */, "]ofv" /* چخبر */, "pgi" /* حله */, "nd'i" /* دیگه */];
 
     private static readonly string[] PersianShouldNotFix =
-        ["برنامه", "بعد", "خیلی", "به", "از", "نمایش", "اطلاعات", "مطالعه", "باید", "سلام", "که", "مدیر", "میشه", "نمیشه", "باشه"];
+        ["برنامه", "بعد", "خیلی", "به", "از", "نمایش", "اطلاعات", "مطالعه", "باید", "سلام", "که", "مدیر",
+         "میشه", "نمیشه", "باشه", "دیگه", "حله", "مخم", "چاکرم", "اوکی", "قربونت", "دمتگرم"];
 
     private static readonly string[] EnglishShouldNotFix =
-        ["performance", "analysis", "project", "experience", "authentication", "shopping", "slam", "book", "id", "app", "api"];
+        ["performance", "analysis", "project", "experience", "authentication", "shopping", "slam",
+         "book", "id", "app", "api",
+         // نام سایت‌های ایرانی که در انگلیسی معنایی ندارند ولی نباید اصلاح شوند
+         "digikala", "aparat", "divar", "snapp", "torob", "sheypoor", "varzesh3", "filimo",
+         "cafebazaar", "zarinpal", "www.aparat.com", "youtube", "instagram", "telegram",
+         // کلمات محاوره‌ای چت و فینگلیش
+         "lol", "btw", "thx", "okay", "yeah", "gonna", "salam", "mamnoon", "chetori", "kheili", "azizam"];
 
     public static void RunAndLog()
     {

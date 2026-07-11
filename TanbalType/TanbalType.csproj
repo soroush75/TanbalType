@@ -11,4 +11,7 @@
     <Version>1.0.0</Version>
     <Description>Auto-fix Persian/English keyboard layout on Windows</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="PersianWords.txt" LogicalName="TanbalType.PersianWords.txt" />
+  </ItemGroup>
 </Project>

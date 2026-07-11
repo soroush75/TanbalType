@@ -1,39 +1,32 @@
+# -*- coding: utf-8 -*-
+"""
+لغت‌نامهٔ فارسی برنامه را از big.txt می‌سازد.
+
+خروجی PersianWords.txt است که به‌صورت EmbeddedResource داخل برنامه قرار می‌گیرد
+(دیگر کلمات داخل Detector.cs نوشته نمی‌شوند تا کامپایل و اجرای برنامه سریع بماند).
+"""
 import re
 
 big_txt_path = 'big.txt'
-detector_path = 'Detector.cs'
+out_path = 'PersianWords.txt'
 
 words_set = set()
 
-# خواندن فایل و جداسازی کلمات با فاصله و نیم‌فاصله (\u200c)
+# خواندن فایل و جداسازی کلمات با فاصله و نیم‌فاصله (‌)
 with open(big_txt_path, 'r', encoding='utf-8') as f:
     for line in f:
-        parts = re.split(r'[ \u200c\t\n]+', line.strip())
-        for p in parts:
-            clean_word = p.strip()
-            if clean_word:
-                words_set.add(clean_word)
+        for p in re.split(r'[ ‌\t\n]+', line.strip()):
+            w = p.strip()
+            if len(w) < 2:
+                continue  # کلمات تک‌حرفی هیچ‌وقت بررسی نمی‌شوند
+            if any(ord(c) < 128 for c in w):
+                continue  # توکن‌های خراب حاوی حروف انگلیسی مثل "]n" یا "b[اسم"
+            words_set.add(w)
 
-sorted_words = sorted(list(words_set))
+sorted_words = sorted(words_set)
 
-# فرمت کردن به شکل کدهای سی‌شارپ
-formatted_words = []
-for i in range(0, len(sorted_words), 10):
-    chunk = ", ".join(f'"{w}"' for w in sorted_words[i:i+10])
-    formatted_words.append("        " + chunk)
+with open(out_path, 'w', encoding='utf-8', newline='\n') as f:
+    f.write('\n'.join(sorted_words))
+    f.write('\n')
 
-hashset_content = "private static readonly HashSet<string> PersianWords = new(StringComparer.Ordinal)\n    {\n"
-hashset_content += ",\n".join(formatted_words)
-hashset_content += "\n    };"
-
-# جایگزینی در فایل اصلی
-with open(detector_path, 'r', encoding='utf-8') as f:
-    content = f.read()
-
-pattern = r'private static readonly HashSet<string> PersianWords = new\(StringComparer\.Ordinal\)\s*\{.*?\};'
-new_content = re.sub(pattern, hashset_content, content, flags=re.DOTALL)
-
-with open(detector_path, 'w', encoding='utf-8') as f:
-    f.write(new_content)
-
-print(f"عملیات با موفقیت انجام شد! {len(words_set)} لغت یکتا به فایل Detector.cs اضافه شد.")
+print(f"عملیات با موفقیت انجام شد! {len(sorted_words)} لغت یکتا در {out_path} نوشته شد.")
