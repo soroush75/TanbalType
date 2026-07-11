@@ -11,7 +11,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     // مشخصات برنامه
     private readonly string AppName = "TanbalType";
-    private readonly string AppVersion = "1.0.0";
+    private readonly string AppVersion = "1.1.0";
     private readonly string AppDeveloper = "سروش سرمست";
 
     // مسیر داینامیک پوشه Startup کاربر در ویندوز

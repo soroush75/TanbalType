@@ -13,11 +13,14 @@ internal static class DetectorSelfTest
     private static readonly string[] PersianOnEnLayout =
         ["sghl", "ldo,hil", "vh", "fhc", ";vnd", "ffdkd", "ldai", "kldai", "dh", "fh", "hc",
          // کلمات محاوره‌ای فارسی که روی حالت انگلیسی تایپ شده‌اند
-         "]x,vd" /* چطوری */, "]ofv" /* چخبر */, "pgi" /* حله */, "nd'i" /* دیگه */];
+         "]x,vd" /* چطوری */, "]ofv" /* چخبر */, "pgi" /* حله */, "nd'i" /* دیگه */,
+         "jaodwa" /* تشخیصش */, ";jhfa" /* کتابش */];
 
     private static readonly string[] PersianShouldNotFix =
         ["برنامه", "بعد", "خیلی", "به", "از", "نمایش", "اطلاعات", "مطالعه", "باید", "سلام", "که", "مدیر",
-         "میشه", "نمیشه", "باشه", "دیگه", "حله", "مخم", "چاکرم", "اوکی", "قربونت", "دمتگرم"];
+         "میشه", "نمیشه", "باشه", "دیگه", "حله", "مخم", "چاکرم", "اوکی", "قربونت", "دمتگرم",
+         // کلمات لغت‌نامه‌ای با پسوند چسبان — نباید به انگلیسی تبدیل شوند
+         "تشخیصش", "تشخیصشون", "برنامشون", "لپتاپم", "موبایلت", "پروژهام"];
 
     private static readonly string[] EnglishShouldNotFix =
         ["performance", "analysis", "project", "experience", "authentication", "shopping", "slam",

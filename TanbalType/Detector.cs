@@ -186,6 +186,38 @@ public static class Detector
         return set;
     }
 
+    // پسوندهای چسبان فارسی (ضمایر ملکی، جمع، صفت تفضیلی و ...) — از بلند به کوتاه
+    private static readonly string[] PersianAttachedSuffixes =
+    [
+        "هایشان", "هایتان", "هایمان", "هاشون", "هاتون", "هامون",
+        "هایش", "هایت", "هایم", "هایی", "هاش", "هات", "هام", "های",
+        "شان", "تان", "مان", "شون", "تون", "مون", "ترین", "تری",
+        "ها", "تر", "اش", "ات", "ام",
+        "ش", "ت", "م", "ی", "و", "ه"
+    ];
+
+    /// <summary>کلمهٔ موجود در لغت‌نامهٔ فارسی، یا کلمهٔ لغت‌نامه‌ای با پسوند چسبان (مثل «تشخیصش»، «کتابم»، «خونمون»)</summary>
+    private static bool IsKnownPersianWord(string word)
+    {
+        if (PersianWords.Contains(word))
+            return true;
+
+        foreach (var suffix in PersianAttachedSuffixes)
+        {
+            // برای پسوندهای تک‌حرفی، ریشهٔ حداقل ۳ حرفی لازم است تا با کلمات کوتاه انگلیسی
+            // (مثل api که روی حالت فارسی «شحه» می‌شود) تداخل نکند
+            var minStem = suffix.Length == 1 ? 3 : 2;
+            if (word.Length < suffix.Length + minStem)
+                continue;
+            if (!word.EndsWith(suffix, StringComparison.Ordinal))
+                continue;
+            if (PersianWords.Contains(word[..^suffix.Length]))
+                return true;
+        }
+
+        return false;
+    }
+
     private static readonly HashSet<string> PersianMarkers =
     [
         "سلام", "لام", "های", "خواه", "خواهم", "کتاب", "خوب", "دوست", "برنامه",
@@ -235,7 +267,8 @@ public static class Detector
 
     private static string? DetectEnglishIntendedOnPersianLayout(string word)
     {
-        if (PersianWords.Contains(word))
+        // کلمهٔ لغت‌نامه‌ای یا کلمه‌ای با پسوند چسبان («تشخیصش») — فارسیِ عمدی است
+        if (IsKnownPersianWord(word))
             return null;
 
         var mappedEn = Mapper.PersianToEnKeys(word);
@@ -284,7 +317,7 @@ public static class Detector
 
         var mappedFa = Mapper.EnKeysToPersian(word);
 
-        if (PersianWords.Contains(mappedFa))
+        if (IsKnownPersianWord(mappedFa))
             return mappedFa;
 
         var englishScore = ScoreIntentionalEnglish(word);
@@ -522,7 +555,7 @@ public static class Detector
 
     private static double ScoreIntentionalPersian(string word)
     {
-        if (PersianWords.Contains(word))
+        if (IsKnownPersianWord(word))
             return 1.0;
 
         if (Mapper.CountPersian(word) < word.Length * 0.85) return 0;
