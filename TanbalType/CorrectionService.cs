@@ -2,17 +2,10 @@ namespace TanbalType;
 
 internal sealed class CorrectionService
 {
-    private static readonly HashSet<char> WordDelimiters =
-        [' ', '\n', '\t', '.', '!', '?', ':', '،', '؛', '؟'];
-
-    private const double RevertWindowSec = 4.0;
-
     private readonly object _lock = new();
     private readonly Action<Action> _dispatch;
     private string _buffer = string.Empty;
     private bool? _bufferLayoutIsPersian;
-    private CorrectionRecord? _lastCorrection;
-    private int _undoBackspaces;
     private char? _lastDelimiter = null; // حافظه برای ذخیره آخرین کلید جداکننده
 
     public CorrectionService(Action<Action> dispatch)
@@ -38,11 +31,8 @@ internal sealed class CorrectionService
 
             if (vkCode == NativeMethods.VkBack)
             {
-                if (TryHandleUndoBackspace())
-                {
-                    consume = true;
-                    return true;
-                }
+                // پاک‌کردن یعنی پاک‌کردن: اگر کاربر بعد از یک اصلاح در حال حذف است،
+                // برنامه نباید متن را بازگرداند یا دوباره تصمیم به اصلاح بگیرد.
 
                 if (_buffer.Length > 0)
                 {
@@ -66,9 +56,6 @@ internal sealed class CorrectionService
                 _buffer = string.Empty;
                 _bufferLayoutIsPersian = null;
 
-                if (_lastCorrection is not null)
-                    ClearCorrectionState();
-
                 var corrected = MaybeCorrect(word, layoutIsPersian);
                 AppLog.Write($"Delimiter vk={vkCode} layout={(layoutIsPersian ? "fa" : "en")} word='{word}' -> '{corrected ?? word}'");
 
@@ -91,8 +78,6 @@ internal sealed class CorrectionService
             if (ch is null || char.IsControl(ch.Value))
                 return false;
 
-            if (_lastCorrection is not null)
-                ClearCorrectionState();
 
             if (_buffer.Length == 0)
                 _bufferLayoutIsPersian = persian;
@@ -133,7 +118,7 @@ internal sealed class CorrectionService
         if (correctedIsPersian && !wasPersian && replaceSpace)
         {
             prefix = " ";
-            deleteCount += 1; 
+            deleteCount += 1;
         }
 
         AppLog.Write($"Apply delete={deleteCount} '{original}' -> '{prefix}{corrected}' (consumed: {delimiterConsumed})");
@@ -143,7 +128,7 @@ internal sealed class CorrectionService
         {
             if (deleteCount > 0)
                 InputSimulator.SendBackspaces(deleteCount);
-            
+
             LayoutManager.SwitchForCorrection(wasPersian, correctedIsPersian);
             Thread.Sleep(30);
 
@@ -154,74 +139,6 @@ internal sealed class CorrectionService
             IsCorrecting = false;
         }
 
-        _lastCorrection = new CorrectionRecord(
-            original,
-            corrected,
-            wasPersian,
-            delimiter,
-            prefix,
-            DateTime.UtcNow);
-        _undoBackspaces = 0;
-    }
-
-    private bool TryHandleUndoBackspace()
-    {
-        var record = _lastCorrection;
-        if (record is null)
-            return false;
-
-        if ((DateTime.UtcNow - record.AppliedAt).TotalSeconds > RevertWindowSec)
-        {
-            ClearCorrectionState();
-            return false;
-        }
-
-        _undoBackspaces++;
-        
-        var target = record.Corrected.Length +
-                     (string.IsNullOrEmpty(record.Delimiter) ? 0 : 1) +
-                     (string.IsNullOrEmpty(record.Prefix) ? 0 : 1);
-        
-        if (_undoBackspaces < target)
-            return false;
-
-        RevertCorrection(record);
-        return true;
-    }
-
-    private void RevertCorrection(CorrectionRecord record)
-    {
-        AppLog.Write($"Revert '{record.Corrected}' -> '{record.Original}'");
-
-        var correctedIsPersian = Mapper.CountPersian(record.Corrected) > record.Corrected.Length / 2;
-        var deleteCount = record.Corrected.Length +
-                          (string.IsNullOrEmpty(record.Delimiter) ? 0 : 1) +
-                          (string.IsNullOrEmpty(record.Prefix) ? 0 : 1);
-
-        IsCorrecting = true;
-        try
-        {
-            InputSimulator.SendBackspaces(deleteCount);
-            
-            LayoutManager.SwitchForCorrection(correctedIsPersian, record.LayoutWasPersian);
-            Thread.Sleep(30);
-
-            var restoredPrefix = string.IsNullOrEmpty(record.Prefix) ? "" : " ";
-
-            InputSimulator.SendText(restoredPrefix + record.Original + record.Delimiter);
-        }
-        finally
-        {
-            IsCorrecting = false;
-        }
-
-        ClearCorrectionState();
-    }
-
-    private void ClearCorrectionState()
-    {
-        _lastCorrection = null;
-        _undoBackspaces = 0;
     }
 
     private static bool IsModifierDown() =>
@@ -235,12 +152,4 @@ internal sealed class CorrectionService
 
     private static bool IsDelimiterKey(uint vkCode) =>
         vkCode is 0x20 or NativeMethods.VkReturn or NativeMethods.VkTab;
-
-    private sealed record CorrectionRecord(
-        string Original,
-        string Corrected,
-        bool LayoutWasPersian,
-        string Delimiter,
-        string Prefix,
-        DateTime AppliedAt);
 }

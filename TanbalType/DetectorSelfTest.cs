@@ -8,7 +8,12 @@ internal static class DetectorSelfTest
         ["hello", "book", "world", "class", "please", "computer", "good", "test", "name", "google",
          "login", "dashboard", "database", "application", "fararu.com", "app", "api",
          // نام سایت‌ها و کلمات محاوره‌ای که روی حالت فارسی تایپ شده‌اند
-         "digikala", "youtube", "instagram", "aparat", "www.digikala.com", "salam", "mamnoon"];
+         "digikala", "youtube", "instagram", "aparat", "www.digikala.com", "salam", "mamnoon",
+         // انگلیسی که قبلاً به‌خاطر تداخل با لغت‌نامه اصلاح نمی‌شد (واژهٔ فارسیِ مسدودکننده حذف شد)
+         "just", "load", "can", "did",
+         "as","at","co","he","had","how","if","ill","in","ir","is","it","its","idk","jan",
+         "gg","gif","git","gn","go","nah","ok","on","or","os","pc","pdf","she","so","tbh",
+         "thx","to","ty","ui","us","ux","why","wp"];
 
     private static readonly string[] PersianOnEnLayout =
         ["sghl", "ldo,hil", "vh", "fhc", ";vnd", "ffdkd", "ldai", "kldai", "dh", "fh", "hc",
@@ -20,7 +25,9 @@ internal static class DetectorSelfTest
         ["برنامه", "بعد", "خیلی", "به", "از", "نمایش", "اطلاعات", "مطالعه", "باید", "سلام", "که", "مدیر",
          "میشه", "نمیشه", "باشه", "دیگه", "حله", "مخم", "چاکرم", "اوکی", "قربونت", "دمتگرم",
          // کلمات لغت‌نامه‌ای با پسوند چسبان — نباید به انگلیسی تبدیل شوند
-         "تشخیصش", "تشخیصشون", "برنامشون", "لپتاپم", "موبایلت", "پروژهام"];
+         "تشخیصش", "تشخیصشون", "برنامشون", "لپتاپم", "موبایلت", "پروژهام",
+         // کلمات واقعی فارسی که با انگلیسی تداخل دارند ولی باید حفظ شوند
+         "شد", "یخ", "هدف", "خب", "مخزن", "اثاث", "زهد", "مخل"];
 
     private static readonly string[] EnglishShouldNotFix =
         ["performance", "analysis", "project", "experience", "authentication", "shopping", "slam",

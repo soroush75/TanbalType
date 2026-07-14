@@ -1,32 +1,66 @@
 # -*- coding: utf-8 -*-
 """
-لغت‌نامهٔ فارسی برنامه را از big.txt می‌سازد.
+لغت‌نامهٔ فارسی برنامه را از big.txt می‌سازد و پاک‌سازی می‌کند.
 
-خروجی PersianWords.txt است که به‌صورت EmbeddedResource داخل برنامه قرار می‌گیرد
-(دیگر کلمات داخل Detector.cs نوشته نمی‌شوند تا کامپایل و اجرای برنامه سریع بماند).
+خروجی PersianWords.txt است که به‌صورت EmbeddedResource داخل برنامه قرار می‌گیرد.
+
+مراحل پاک‌سازی:
+  ۱) نرمال‌سازی به فارسیِ استاندارد: تبدیل حروف عربی (ك→ک، ي/ى→ی، ة→ه، ...)،
+     حذف اعراب و همزهٔ ترکیبی و کاراکترهای کنترلی (ZWJ، BOM، کشیده).
+  ۲) حذف توکن‌های نامعتبر: کوتاه‌تر از ۲ حرف، بلندتر از ۱۳ حرف (کلمات به‌هم‌چسبیده)،
+     یا دارای کاراکتر غیرفارسی.
+  ۳) حذف چند واژهٔ بی‌معنی که با کلمات پرکاربرد انگلیسی تداخل دارند و مانع اصلاح می‌شوند.
 """
 import re
 
-big_txt_path = 'big.txt'
-out_path = 'PersianWords.txt'
+BIG_TXT = 'big.txt'
+OUT = 'PersianWords.txt'
 
-words_set = set()
+PERSIAN = set("ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیآئءؤ")
+ZWNJ = '‌'
 
-# خواندن فایل و جداسازی کلمات با فاصله و نیم‌فاصله (‌)
-with open(big_txt_path, 'r', encoding='utf-8') as f:
+# اعراب/تنوین/همزهٔ ترکیبی/الف کوچک/کشیده + ZWJ + BOM  → حذف
+_STRIP = dict.fromkeys(
+    [0x064B, 0x064C, 0x064D, 0x064E, 0x064F, 0x0650, 0x0651, 0x0652,
+     0x0653, 0x0654, 0x0655, 0x0670, 0x0640, 0x200D, 0xFEFF], None)
+
+# واژه‌های بی‌معنی که تصویرِ کلیدهای فارسیِ یک کلمهٔ پرکاربرد انگلیسی‌اند
+# (نگه‌داشتنشان مانع اصلاح آن کلمهٔ انگلیسی می‌شد؛ خودشان کلمهٔ فارسی واقعی نیستند)
+COLLISION_JUNK = {
+    # مجموعهٔ اولیه
+    "زشد", "یهی", "تعسف", "مخشی",
+    # موارد درخواستی کاربر (دنباله‌های کوتاه/بی‌معنی که مانع انگلیسی پرکاربرد بودند)
+    "شس", "شف", "زخ", "اث", "اشی", "اخص", "هب", "همم", "هد", "هق",
+    "هس", "هف", "هفس", "هین", "تشد", "لل", "لهب", "لهف", "لد", "لخ",
+    "دشا", "خن", "خد", "خق", "خس", "حز", "حیب", "ساث", "سخ", "فذا",
+    "فاط", "فخ", "فغ", "عه", "عس", "عط", "صاغ", "صح",
+    # موارد پسوندی (خودشان بی‌معنی‌اند؛ ولی مسدودکنندهٔ واقعی ممکن است ریشه باشد)
+    "شذته", "اشاش", "تشرش", "نهدیش", "نختش", "رخهی", "بهدی",
+}
+
+
+def normalize(w):
+    w = (w.replace('ك', 'ک').replace('ي', 'ی').replace('ى', 'ی')
+          .replace('ٱ', 'ا').replace('أ', 'ا').replace('إ', 'ا')
+          .replace('ة', 'ه').replace('‐', '').replace('-', ''))
+    return w.translate(_STRIP)
+
+
+def valid(w):
+    return 2 <= len(w) < 14 and all(ch in PERSIAN or ch == ZWNJ for ch in w)
+
+
+words = set()
+with open(BIG_TXT, encoding='utf-8') as f:
     for line in f:
-        for p in re.split(r'[ ‌\t\n]+', line.strip()):
-            w = p.strip()
-            if len(w) < 2:
-                continue  # کلمات تک‌حرفی هیچ‌وقت بررسی نمی‌شوند
-            if any(ord(c) < 128 for c in w):
-                continue  # توکن‌های خراب حاوی حروف انگلیسی مثل "]n" یا "b[اسم"
-            words_set.add(w)
+        for tok in re.split(r'[ ‌\t\n]+', line.strip()):
+            n = normalize(tok.strip())
+            if valid(n) and n not in COLLISION_JUNK:
+                words.add(n)
 
-sorted_words = sorted(words_set)
-
-with open(out_path, 'w', encoding='utf-8', newline='\n') as f:
+sorted_words = sorted(words)
+with open(OUT, 'w', encoding='utf-8', newline='\n') as f:
     f.write('\n'.join(sorted_words))
     f.write('\n')
 
-print(f"عملیات با موفقیت انجام شد! {len(sorted_words)} لغت یکتا در {out_path} نوشته شد.")
+print(f"انجام شد: {len(sorted_words)} لغت یکتای پاک‌سازی‌شده در {OUT} نوشته شد.")
