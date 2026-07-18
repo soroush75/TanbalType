@@ -259,6 +259,11 @@ public static class Detector
         if (word.Length < 2)
             return null;
 
+        // اعداد را هرگز اصلاح نمی‌کنیم: رمز عبور، کد، شماره، سال، نسخه و ... نباید تغییر کنند.
+        // (char.IsDigit شاملِ ارقام فارسی ۰-۹ و عربی هم می‌شود)
+        if (word.Any(char.IsDigit))
+            return null;
+
         if (currentLayoutIsPersian)
             return DetectEnglishIntendedOnPersianLayout(word);
 

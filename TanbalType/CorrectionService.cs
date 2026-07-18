@@ -27,6 +27,14 @@ internal sealed class CorrectionService
 
         lock (_lock)
         {
+            // در کادر رمز عبور اصلاً بافر نمی‌کنیم و اصلاح نمی‌کنیم تا رمز خراب نشود.
+            if (WindowContext.IsPasswordFieldFocused())
+            {
+                _buffer = string.Empty;
+                _bufferLayoutIsPersian = null;
+                return false;
+            }
+
             var persian = LayoutManager.IsPersianLayout();
 
             if (vkCode == NativeMethods.VkBack)

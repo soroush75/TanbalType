@@ -29,6 +29,11 @@ internal static class DetectorSelfTest
          // کلمات واقعی فارسی که با انگلیسی تداخل دارند ولی باید حفظ شوند
          "شد", "یخ", "هدف", "خب", "مخزن", "اثاث", "زهد", "مخل"];
 
+    // اعداد و توکن‌های حاوی عدد (رمز عبور/کد/شماره) در هیچ حالتی نباید اصلاح شوند
+    private static readonly string[] DigitTokensShouldNotFix =
+        ["1234", "pass123", "admin2024", "user1", "sar12", "P@ss1",
+         "۱۲۳۴", "رمز۱۲۳", "شسق۲۰۲۴"];
+
     private static readonly string[] EnglishShouldNotFix =
         ["performance", "analysis", "project", "experience", "authentication", "shopping", "slam",
          "book", "id", "app", "api",
@@ -78,6 +83,16 @@ internal static class DetectorSelfTest
             if (Detector.DetectWrongLayout(word, currentLayoutIsPersian: false) is not null)
             {
                 AppLog.Write($"SelfTest EN false-positive: {word}");
+                failed++;
+            }
+        }
+
+        foreach (var word in DigitTokensShouldNotFix)
+        {
+            if (Detector.DetectWrongLayout(word, currentLayoutIsPersian: true) is not null
+                || Detector.DetectWrongLayout(word, currentLayoutIsPersian: false) is not null)
+            {
+                AppLog.Write($"SelfTest digit false-positive: {word}");
                 failed++;
             }
         }
