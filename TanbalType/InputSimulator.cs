@@ -94,7 +94,7 @@ internal static class InputSimulator
         {
             AppLog.Write($"SendInput text failed, using clipboard paste len={text.Length}");
             var previous = Clipboard.ContainsText() ? Clipboard.GetText() : null;
-            Clipboard.SetText(text);
+            SetClipboardTextPrivate(text);
             SendCtrlV();
             Thread.Sleep(20);
 
@@ -111,6 +111,23 @@ internal static class InputSimulator
             AppLog.Write($"Clipboard paste failed: {ex.Message}");
             return false;
         }
+    }
+
+    /// <summary>
+    /// متن را طوری در کلیپ‌بورد می‌گذارد که در «تاریخچهٔ کلیپ‌بورد» (Win+V) ذخیره نشود
+    /// و با Cloud Clipboard به دستگاه‌های دیگر هم همگام‌سازی نشود.
+    /// </summary>
+    private static void SetClipboardTextPrivate(string text)
+    {
+        var data = new DataObject();
+        data.SetText(text);
+
+        static MemoryStream DwordZero() => new([0, 0, 0, 0]);
+        data.SetData("ExcludeClipboardContentFromMonitorProcessing", DwordZero());
+        data.SetData("CanIncludeInClipboardHistory", DwordZero());
+        data.SetData("CanUploadToCloudClipboard", DwordZero());
+
+        Clipboard.SetDataObject(data, copy: true);
     }
 
     private static void SendCtrlV()

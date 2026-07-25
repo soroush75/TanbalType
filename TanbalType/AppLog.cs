@@ -85,6 +85,7 @@ internal static class AppLog
             var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}{Environment.NewLine}";
             var wroteAny = false;
 
+            // فقط در «اولین» مسیر قابل‌نوشتن ذخیره می‌کنیم؛ کپی‌های متعدد از log سطح افشا را بالا می‌برد.
             foreach (var path in AllPaths)
             {
                 try
@@ -94,6 +95,7 @@ internal static class AppLog
                         Directory.CreateDirectory(dir);
                     File.AppendAllText(path, line);
                     wroteAny = true;
+                    break;
                 }
                 catch
                 {

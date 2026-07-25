@@ -7,6 +7,7 @@ internal sealed class CorrectionService
     private string _buffer = string.Empty;
     private bool? _bufferLayoutIsPersian;
     private char? _lastDelimiter = null; // حافظه برای ذخیره آخرین کلید جداکننده
+    private IntPtr _lastForegroundWindow = IntPtr.Zero;
 
     public CorrectionService(Action<Action> dispatch)
     {
@@ -27,6 +28,16 @@ internal sealed class CorrectionService
 
         lock (_lock)
         {
+            // با تغییر پنجرهٔ فعال، بافر پاک می‌شود تا متنِ یک برنامه به برنامهٔ دیگر منتقل نشود.
+            var foreground = NativeMethods.GetForegroundWindow();
+            if (foreground != _lastForegroundWindow)
+            {
+                _lastForegroundWindow = foreground;
+                _buffer = string.Empty;
+                _bufferLayoutIsPersian = null;
+                _lastDelimiter = null;
+            }
+
             // در کادر رمز عبور اصلاً بافر نمی‌کنیم و اصلاح نمی‌کنیم تا رمز خراب نشود.
             if (WindowContext.IsPasswordFieldFocused())
             {
@@ -65,6 +76,8 @@ internal sealed class CorrectionService
                 _bufferLayoutIsPersian = null;
 
                 var corrected = MaybeCorrect(word, layoutIsPersian);
+                // توجه: با فعال‌بودن log، متن تایپ‌شده هم ذخیره می‌شود (برای عیب‌یابی).
+                // log پیش‌فرض خاموش است و فقط با انتخاب کاربر از منوی tray فعال می‌شود.
                 AppLog.Write($"Delimiter vk={vkCode} layout={(layoutIsPersian ? "fa" : "en")} word='{word}' -> '{corrected ?? word}'");
 
                 // بررسی می‌کنیم که آیا کلمه قبلی واقعاً با Space جدا شده است یا مثلاً با Enter (اول خط)
