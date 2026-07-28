@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\sorou\\Downloads\\Telegram Desktop\\TanbalType\\TanbalType\\TanbalType\\TanbalType.csproj": {}
+    "C:\\Users\\HBC-PC1\\Documents\\GitHub\\TanbalType\\TanbalType\\TanbalType.csproj": {}
   },
   "projects": {
-    "C:\\Users\\sorou\\Downloads\\Telegram Desktop\\TanbalType\\TanbalType\\TanbalType\\TanbalType.csproj": {
+    "C:\\Users\\HBC-PC1\\Documents\\GitHub\\TanbalType\\TanbalType\\TanbalType.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\sorou\\Downloads\\Telegram Desktop\\TanbalType\\TanbalType\\TanbalType\\TanbalType.csproj",
+        "projectUniqueName": "C:\\Users\\HBC-PC1\\Documents\\GitHub\\TanbalType\\TanbalType\\TanbalType.csproj",
         "projectName": "TanbalType",
-        "projectPath": "C:\\Users\\sorou\\Downloads\\Telegram Desktop\\TanbalType\\TanbalType\\TanbalType\\TanbalType.csproj",
-        "packagesPath": "C:\\Users\\sorou\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\sorou\\Downloads\\Telegram Desktop\\TanbalType\\TanbalType\\TanbalType\\obj\\",
+        "projectPath": "C:\\Users\\HBC-PC1\\Documents\\GitHub\\TanbalType\\TanbalType\\TanbalType.csproj",
+        "packagesPath": "C:\\Users\\HBC-PC1\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\HBC-PC1\\Documents\\GitHub\\TanbalType\\TanbalType\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\sorou\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\HBC-PC1\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0-windows"
@@ -61,7 +61,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.422/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.423/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
