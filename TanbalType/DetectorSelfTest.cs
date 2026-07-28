@@ -27,7 +27,16 @@ internal static class DetectorSelfTest
          // کلمات لغت‌نامه‌ای با پسوند چسبان — نباید به انگلیسی تبدیل شوند
          "تشخیصش", "تشخیصشون", "برنامشون", "لپتاپم", "موبایلت", "پروژهام",
          // کلمات واقعی فارسی که با انگلیسی تداخل دارند ولی باید حفظ شوند
-         "شد", "یخ", "هدف", "خب", "مخزن", "اثاث", "زهد", "مخل"];
+         "شد", "یخ", "هدف", "خب", "مخزن", "اثاث", "زهد", "مخل",
+         // واژه‌های واقعی فارسی که با نام سایت تداخل داشتند و عمداً حفظ شدند
+         "فر", "هل", "شخم", "نشمه", "مل", "نهش", "دهنش", "بش"];
+
+    // نام سایت‌های متداول که نباید روی حالت انگلیسی به فارسی تبدیل شوند
+    private static readonly string[] SiteNamesShouldNotFix =
+        ["tv", "ig", "fb", "tg", "lg", "hm", "vk", "cc", "hh", "aol", "dhl", "un",
+         "kia", "audi", "dji", "kali", "raja", "avval",
+         "digikala.com", "www.aparat.com", "divar.ir", "google.com",
+         "fafa"]; // باگ گزارش‌شده در لاگ: fafa + Enter اشتباهاً «بشبش» می‌شد
 
     // اعداد و توکن‌های حاوی عدد (رمز عبور/کد/شماره) در هیچ حالتی نباید اصلاح شوند
     private static readonly string[] DigitTokensShouldNotFix =
@@ -83,6 +92,15 @@ internal static class DetectorSelfTest
             if (Detector.DetectWrongLayout(word, currentLayoutIsPersian: false) is not null)
             {
                 AppLog.Write($"SelfTest EN false-positive: {word}");
+                failed++;
+            }
+        }
+
+        foreach (var word in SiteNamesShouldNotFix)
+        {
+            if (Detector.DetectWrongLayout(word, currentLayoutIsPersian: false) is { } fixedTo)
+            {
+                AppLog.Write($"SelfTest site-name interference: {word} -> '{fixedTo}'");
                 failed++;
             }
         }

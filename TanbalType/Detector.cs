@@ -55,7 +55,9 @@ public static class Detector
         "firefox", "chrome", "opera", "brave", "cloudflare", "vercel",
         "netlify", "wordpress", "blogger", "tumblr", "imdb", "goodreads",
         "behance", "dribbble", "duckduckgo", "protonmail", "proton",
-        "crunchyroll", "wattpad"
+        "crunchyroll", "wattpad",
+        // برندها/سایت‌هایی که نگاشتشان با واژهٔ فارسی تداخل داشت (kia→«نهش»، audi→«شعیه»، ...)
+        "kia", "audi", "dji", "kali", "raja", "avval"
     };
 
     private static readonly HashSet<string> EnglishWords = new(StringComparer.OrdinalIgnoreCase)
@@ -135,7 +137,14 @@ public static class Detector
         "fadat", "damet", "garm", "eyval", "eyvallah", "bikhial", "velesh",
         "bezar", "bede", "begoo", "bia", "boro", "berim", "bashe", "chashm",
         "kheili", "kheyli", "aali", "daram", "dooset", "doset", "mokhles",
-        "chakeram", "dorood", "dorud", "khaste", "nabashi", "nabashid", "mrc"
+        "chakeram", "dorood", "dorud", "khaste", "nabashi", "nabashid", "mrc",
+
+        // --- مخفف‌ها و نام‌های کوتاه سایت/برند ---
+        // این‌ها چون کوتاه‌اند با واژه‌های واقعی فارسی تداخل داشتند و اشتباهاً فارسی می‌شدند
+        // (مثلاً tv→«فر»، ig→«هل»، aol→«شخم»). این‌جا محافظت می‌شوند بدون آنکه واژهٔ فارسی حذف شود.
+        "tv", "vk", "hh", "cc", "ig", "fb", "tg", "hm", "lg", "aol", "dhl", "un",
+        // کدهای زبان/کشور که مستقیم در نوار آدرس تایپ می‌شوند (fa → «بش» می‌شد)
+        "fa", "en", "de", "fr", "es", "ru", "ar", "tr", "it", "jp", "kr", "cn", "uk"
     };
 
     // کلمات محاوره‌ای فارسی که در فایل لغت‌نامه نیستند ولی در تایپ روزمره زیاد استفاده می‌شوند
@@ -196,11 +205,20 @@ public static class Detector
         "ش", "ت", "م", "ی", "و", "ه"
     ];
 
-    /// <summary>کلمهٔ موجود در لغت‌نامهٔ فارسی، یا کلمهٔ لغت‌نامه‌ای با پسوند چسبان (مثل «تشخیصش»، «کتابم»، «خونمون»)</summary>
-    private static bool IsKnownPersianWord(string word)
+    /// <summary>قدرتِ تطبیق یک کلمه با لغت‌نامهٔ فارسی.</summary>
+    private enum DictMatch
+    {
+        None,
+        Exact,   // خودِ کلمه در لغت‌نامه است — شواهد قوی
+        Strong,  // ریشهٔ ۴+ حرفی یا پسوند چندحرفی (مثل «تشخیص»+«ش»، «خون»+«مون»)
+        Weak,    // ریشهٔ کوتاه (۲-۳ حرفی) + پسوند تک‌حرفی — شواهد ضعیف و مستعد خطا
+    }
+
+    /// <summary>جستجوی کلمه در لغت‌نامه، مستقیم یا با جداکردن پسوند چسبان (مثل «تشخیصش»، «کتابم»، «خونمون»)</summary>
+    private static DictMatch LookupPersian(string word)
     {
         if (PersianWords.Contains(word))
-            return true;
+            return DictMatch.Exact;
 
         foreach (var suffix in PersianAttachedSuffixes)
         {
@@ -211,12 +229,35 @@ public static class Detector
                 continue;
             if (!word.EndsWith(suffix, StringComparison.Ordinal))
                 continue;
-            if (PersianWords.Contains(word[..^suffix.Length]))
-                return true;
+
+            var stem = word[..^suffix.Length];
+            if (!PersianWords.Contains(stem))
+                continue;
+
+            return suffix.Length == 1 && stem.Length <= 3 ? DictMatch.Weak : DictMatch.Strong;
         }
 
-        return false;
+        return DictMatch.None;
     }
+
+    private static bool IsKnownPersianWord(string word) => LookupPersian(word) != DictMatch.None;
+
+    /// <summary>
+    /// واژه‌های دوحرفیِ پرکاربرد فارسی.
+    ///
+    /// لغت‌نامه بیش از ۷۰۰ ورودی دوحرفی دارد که اکثرشان ترکیب‌های نادر یا بی‌معنی‌اند
+    /// (آء، آآ، آت، بش، ...). اگر همهٔ آن‌ها مبنای اصلاح باشند، مخفف‌ها و نام سایت‌های
+    /// دوحرفی (fa، tv، ig، ...) هنگام زدن Enter در نوار آدرس اشتباهاً فارسی می‌شوند.
+    /// بنابراین در جهتِ انگلیسی←فارسی فقط این فهرست ملاک است.
+    /// (در جهتِ مخالف همچنان کل لغت‌نامه معتبر است تا واژهٔ فارسیِ تایپ‌شده حفظ شود.)
+    /// </summary>
+    private static readonly HashSet<string> CommonTwoLetterPersian =
+    [
+        "به", "از", "با", "تا", "را", "که", "در", "هم", "ما", "او", "بی", "یا",
+        "نه", "من", "تو", "ای", "آن", "دو", "سه", "بر", "پس", "هر", "چه", "جا",
+        "رو", "شد", "کن", "یک", "کم", "بد", "دل", "سر", "پا", "گل", "شب", "نو",
+        "بس", "کل", "رد", "بو", "مو", "تن", "کی", "وی", "آب", "نان", "کار",
+    ];
 
     private static readonly HashSet<string> PersianMarkers =
     [
@@ -321,11 +362,23 @@ public static class Detector
             return null;
 
         var mappedFa = Mapper.EnKeysToPersian(word);
+        var match = LookupPersian(mappedFa);
+        var englishScore = ScoreIntentionalEnglish(word);
 
-        if (IsKnownPersianWord(mappedFa))
+        // توکن دوحرفی: فقط واژه‌های پرکاربرد از روی لغت‌نامه اصلاح می‌شوند
+        // (وگرنه fa → «بش»، tv → «فر» و ... آدرس‌ها را خراب می‌کنند)
+        if (mappedFa.Length == 2 && !CommonTwoLetterPersian.Contains(mappedFa))
+            match = DictMatch.None;
+
+        // تطبیقِ ضعیف (ریشهٔ کوتاه + پسوند تک‌حرفی) نباید بر شواهدِ قویِ انگلیسی غلبه کند.
+        // در غیر این صورت نام سایت‌هایی مثل fafa (که به «بشب»+«ش» تجزیه می‌شد) هنگام زدن
+        // Enter در نوار آدرس اشتباهاً فارسی می‌شدند.
+        if (match == DictMatch.Weak && englishScore >= StrongEnglishThreshold)
+            match = DictMatch.None;
+
+        if (match != DictMatch.None)
             return mappedFa;
 
-        var englishScore = ScoreIntentionalEnglish(word);
         if (englishScore >= StrongEnglishThreshold)
             return null;
 

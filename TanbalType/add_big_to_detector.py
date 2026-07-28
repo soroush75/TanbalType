@@ -52,6 +52,15 @@ ABADIS_NOT_FOUND = {
     "رخط", "ضیث", "طوز", "ظزف", "ظلک",
 }
 
+# واژه‌های بی‌معنی که با نام سایت‌های متداول تداخل داشتند و باعث می‌شدند
+# نام سایت روی حالت انگلیسی اشتباهاً به فارسی تبدیل شود.
+# «قشت/شعیه/شررش» با آبادیس تأیید شدند («پیدا نشد»)؛ «اا/زز/ائ» تکرارِ بی‌معنی حرف‌اند.
+SITE_COLLISION_JUNK = {
+    "اا", "زز", "ائ",        # hh, cc, hm
+    "قشت", "شعیه", "شررش",   # raja, audi, avval
+    "بشب",                   # fafa → «بشب»+«ش» (با آبادیس تأیید شد: بی‌معنی)
+}
+
 
 def normalize(w):
     w = (w.replace('ك', 'ک').replace('ي', 'ی').replace('ى', 'ی')
@@ -69,7 +78,8 @@ with open(BIG_TXT, encoding='utf-8') as f:
     for line in f:
         for tok in re.split(r'[ ‌\t\n]+', line.strip()):
             n = normalize(tok.strip())
-            if valid(n) and n not in COLLISION_JUNK and n not in ABADIS_NOT_FOUND:
+            if (valid(n) and n not in COLLISION_JUNK
+                    and n not in ABADIS_NOT_FOUND and n not in SITE_COLLISION_JUNK):
                 words.add(n)
 
 sorted_words = sorted(words)
