@@ -11,6 +11,7 @@
      یا دارای کاراکتر غیرفارسی.
   ۳) حذف چند واژهٔ بی‌معنی که با کلمات پرکاربرد انگلیسی تداخل دارند و مانع اصلاح می‌شوند.
   ۴) حذف ۷۵ کلمهٔ ۲-۳ حرفیِ بی‌معنی که با جستجوی زندهٔ آبادیس تأیید شدند.
+  ۵) حذف توکن‌هایی که الگوی املایی‌شان در فارسی ممکن نیست (تکرار حرف، همزهٔ آغازین).
 """
 import re
 
@@ -73,12 +74,23 @@ def valid(w):
     return 2 <= len(w) < 14 and all(ch in PERSIAN or ch == ZWNJ for ch in w)
 
 
+def orthographic_junk(w):
+    """الگوهایی که در خطِ فارسی ممکن نیستند — یعنی توکن قطعاً غلط یا بی‌معنی است."""
+    if len(set(w)) == 1:
+        return True                      # کل کلمه تکرار یک حرف است: «آآ»، «سسس»
+    if re.search(r'(.)\1\1', w):
+        return True                      # سه حرف یکسان پیاپی: «بخششش»، «برررسی»
+    if w[0] in 'ءئ':
+        return True                      # هیچ واژهٔ فارسی با همزهٔ تنها آغاز نمی‌شود
+    return False
+
+
 words = set()
 with open(BIG_TXT, encoding='utf-8') as f:
     for line in f:
         for tok in re.split(r'[ ‌\t\n]+', line.strip()):
             n = normalize(tok.strip())
-            if (valid(n) and n not in COLLISION_JUNK
+            if (valid(n) and not orthographic_junk(n) and n not in COLLISION_JUNK
                     and n not in ABADIS_NOT_FOUND and n not in SITE_COLLISION_JUNK):
                 words.add(n)
 

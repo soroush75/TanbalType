@@ -5,7 +5,8 @@ namespace TanbalType;
 /// </summary>
 public static class Mapper
 {
-    public static readonly IReadOnlyDictionary<char, char> EnKeyToFa = new Dictionary<char, char>
+    /// <summary>لایهٔ پایه (بدون Shift) روی چیدمان استاندارد فارسی.</summary>
+    private static readonly Dictionary<char, char> BaseKeys = new()
     {
         ['`'] = 'ذ', ['1'] = '۱', ['2'] = '۲', ['3'] = '۳', ['4'] = '۴',
         ['5'] = '۵', ['6'] = '۶', ['7'] = '۷', ['8'] = '۸', ['9'] = '۹',
@@ -19,6 +20,36 @@ public static class Mapper
         ['z'] = 'ظ', ['x'] = 'ط', ['c'] = 'ز', ['v'] = 'ر', ['b'] = 'ذ',
         ['n'] = 'د', ['m'] = 'ئ', [','] = 'و', ['.'] = '.', ['/'] = '/',
     };
+
+    /// <summary>
+    /// کلیدهای Shift دار که روی چیدمان استاندارد فارسی حرف تولید می‌کنند.
+    /// «آ» با Shift+H تایپ می‌شود و بدون این نگاشت، واژه‌هایی مثل «آقا» (کلیدهای Hrh)
+    /// اصلاً تشخیص داده نمی‌شدند.
+    /// </summary>
+    private static readonly Dictionary<char, char> ShiftedKeys = new()
+    {
+        ['H'] = 'آ',
+    };
+
+    public static readonly IReadOnlyDictionary<char, char> EnKeyToFa = BuildEnKeyToFa();
+
+    private static Dictionary<char, char> BuildEnKeyToFa()
+    {
+        var map = new Dictionary<char, char>(BaseKeys);
+
+        // حروف بزرگ (Caps Lock یا Shift) مثل حرف کوچکِ خودشان نگاشت شوند
+        foreach (var (key, fa) in BaseKeys)
+        {
+            if (key is >= 'a' and <= 'z')
+                map[char.ToUpperInvariant(key)] = fa;
+        }
+
+        // نگاشت اختصاصی Shift بر فالبکِ بالا اولویت دارد
+        foreach (var (key, fa) in ShiftedKeys)
+            map[key] = fa;
+
+        return map;
+    }
 
     public static readonly HashSet<char> EnLayoutKeys = EnKeyToFa.Keys.ToHashSet();
     public static readonly HashSet<char> PersianPunctAscii = [',', ';'];

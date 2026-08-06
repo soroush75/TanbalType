@@ -11,8 +11,13 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     // مشخصات برنامه
     private readonly string AppName = "TanbalType";
-    private readonly string AppVersion = "1.2.0";
     private readonly string AppDeveloper = "سروش سرمست";
+
+    // نسخه از خودِ اسمبلی خوانده می‌شود (منبع واحد: تگ Version در TanbalType.csproj)
+    private static string AppVersion =>
+        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version is { } v
+            ? $"{v.Major}.{v.Minor}.{v.Build}"
+            : "?";
 
     // مسیر داینامیک پوشه Startup کاربر در ویندوز
     private string StartupShortcutPath => Path.Combine(
