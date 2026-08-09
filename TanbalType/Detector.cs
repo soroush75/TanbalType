@@ -144,7 +144,21 @@ public static class Detector
         // (مثلاً tv→«فر»، ig→«هل»، aol→«شخم»). این‌جا محافظت می‌شوند بدون آنکه واژهٔ فارسی حذف شود.
         "tv", "vk", "hh", "cc", "ig", "fb", "tg", "hm", "lg", "aol", "dhl", "un",
         // کدهای زبان/کشور که مستقیم در نوار آدرس تایپ می‌شوند (fa → «بش» می‌شد)
-        "fa", "en", "de", "fr", "es", "ru", "ar", "tr", "it", "jp", "kr", "cn", "uk"
+        "fa", "en", "de", "fr", "es", "ru", "ar", "tr", "it", "jp", "kr", "cn", "uk",
+
+        // --- دستورهای ترمینال/ویندوز و پسوند فایل ---
+        // این‌ها با واژه‌های نادر فارسی تداخل داشتند (cmd → «زئی»، pwd → «حصی»، ssh → «سسا»)
+        "cmd", "pwd", "ssh", "scp", "cls", "dir", "cd", "ls", "del", "ren", "md", "rd",
+        "echo", "ping", "curl", "wget", "sudo", "apt", "vim", "nano", "gcc", "top", "ps",
+        "kill", "sed", "awk", "tar", "unzip", "df", "du", "reg", "regedit", "msconfig",
+        "taskmgr", "explorer", "notepad", "calc", "ipconfig", "tasklist", "netstat",
+        "exe", "dll", "iso", "img", "bin", "dat", "cfg", "ini", "bat", "csv", "xls",
+        "ppt", "sh", "py", "ts", "cs", "cpp", "yml", "yaml", "toml", "md5", "sha",
+
+        // --- واژه‌های کوتاه پرکاربرد که با فارسیِ نادر تداخل داشتند ---
+        "big", "add", "avg", "off", "min", "max", "sum", "tmp", "temp", "demo", "root",
+        "home", "work", "edit", "view", "tool", "menu", "back", "next", "prev", "play",
+        "live", "free", "half", "auto", "call", "send", "down", "yes", "bye", "end"
     };
 
     // کلمات محاوره‌ای فارسی که در فایل لغت‌نامه نیستند ولی در تایپ روزمره زیاد استفاده می‌شوند

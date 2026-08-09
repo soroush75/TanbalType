@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "DO6Lbu1qLQU=",
+  "dgSpecHash": "PmW2Pnoiz3o=",
   "success": true,
   "projectFilePath": "C:\\Users\\sorou\\Downloads\\Telegram Desktop\\TanbalType\\TanbalType\\TanbalType\\TanbalType.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\sorou\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.28\\microsoft.net.illink.tasks.8.0.28.nupkg.sha512"
+  ],
   "logs": []
 }

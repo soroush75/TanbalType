@@ -39,7 +39,9 @@ internal static class DetectorSelfTest
         ["tv", "ig", "fb", "tg", "lg", "hm", "vk", "cc", "hh", "aol", "dhl", "un",
          "kia", "audi", "dji", "kali", "raja", "avval",
          "digikala.com", "www.aparat.com", "divar.ir", "google.com",
-         "fafa"]; // باگ گزارش‌شده در لاگ: fafa + Enter اشتباهاً «بشبش» می‌شد
+         "fafa", // باگ گزارش‌شده در لاگ: fafa + Enter اشتباهاً «بشبش» می‌شد
+         // دستورها و پسوندهایی که با واژه‌های نادر فارسی تداخل داشتند
+         "cmd", "pwd", "ssh", "kill", "dll", "xls", "bin", "cfg", "ini", "big", "add", "avg", "off"];
 
     // اعداد و توکن‌های حاوی عدد (رمز عبور/کد/شماره) در هیچ حالتی نباید اصلاح شوند
     private static readonly string[] DigitTokensShouldNotFix =
