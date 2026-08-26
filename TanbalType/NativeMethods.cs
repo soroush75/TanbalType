@@ -8,6 +8,8 @@ internal static class NativeMethods
     public const int WhKeyboardLl = 13;
     public const int WmKeydown = 0x0100;
     public const int WmSysKeydown = 0x0104;
+    public const int WmKeyup = 0x0101;
+    public const int WmSysKeyup = 0x0105;
 
     public const uint VkBack = 0x08;
     public const uint VkTab = 0x09;
@@ -18,6 +20,7 @@ internal static class NativeMethods
     public const uint VkCapital = 0x14;
     public const uint VkLwin = 0x5B;
     public const uint VkRwin = 0x5C;
+    public const uint VkF10 = 0x79;
 
     public const uint InputKeyboard = 1;
     public const uint KeyeventfKeyup = 0x0002;
@@ -124,6 +127,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern short GetKeyState(int nVirtKey);
+
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
 
     // --- تشخیص فیلد رمز عبور (best-effort برای کنترل‌های بومی Win32) ---
     public const int GwlStyle = -16;

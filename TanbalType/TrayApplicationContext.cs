@@ -39,7 +39,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         _hook = new KeyboardHook(_service);
 
-        _enabledItem = new ToolStripMenuItem("فعال", null, ToggleEnabled) { Checked = true };
+        _enabledItem = new ToolStripMenuItem(EnabledItemText(true), null, ToggleEnabled) { Checked = true };
         _logEnabledItem = new ToolStripMenuItem("ذخیره log", null, ToggleLogging) { Checked = AppLog.IsEnabled };
         
         // تنظیم دکمه استارت‌آپ بر اساس وجود فایل Shortcut در پوشه Startup
@@ -62,6 +62,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
             ContextMenuStrip = menu,
         };
 
+        _hook.ToggleRequested += OnToggleHotkey;
+
         try
         {
             _hook.Install();
@@ -69,7 +71,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _trayIcon.ShowBalloonTip(
                 6000,
                 AppName,
-                $"فعال شد.\nLog:\n{AppLog.PrimaryPath}",
+                $"فعال شد.\nبا کلید F10 می‌توانید فعال/غیرفعال کنید.\nLog:\n{AppLog.PrimaryPath}",
                 ToolTipIcon.Info);
         }
         catch (Exception ex)
@@ -86,14 +88,32 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
-    private void ToggleEnabled(object? sender, EventArgs e)
+    private void ToggleEnabled(object? sender, EventArgs e) =>
+        SetEnabled(!_service.Enabled, notify: false);
+
+    // میان‌بر روی همان نخی اجرا می‌شود که hook را نصب کرده (نخ UI)، پس دسترسی مستقیم به منو امن است.
+    private void OnToggleHotkey() =>
+        SetEnabled(!_service.Enabled, notify: true);
+
+    private void SetEnabled(bool enabled, bool notify)
     {
-        _service.Enabled = !_service.Enabled;
-        _enabledItem.Checked = _service.Enabled;
-        _enabledItem.Text = _service.Enabled ? "فعال" : "غیرفعال";
-        _trayIcon.Text = _service.Enabled ? $"{AppName} — فعال" : $"{AppName} — غیرفعال";
-        AppLog.Write(_service.Enabled ? "Enabled" : "Disabled");
+        _service.Enabled = enabled;
+        _enabledItem.Checked = enabled;
+        _enabledItem.Text = EnabledItemText(enabled);
+        _trayIcon.Text = enabled ? $"{AppName} — فعال" : $"{AppName} — غیرفعال";
+        AppLog.Write(enabled ? "Enabled" : "Disabled");
+
+        // با میان‌بر، تنها بازخوردِ کاربر همین اعلان است (منو باز نیست تا تیک را ببیند).
+        if (notify)
+            _trayIcon.ShowBalloonTip(
+                2000,
+                AppName,
+                enabled ? "فعال شد." : "غیرفعال شد.",
+                ToolTipIcon.Info);
     }
+
+    private static string EnabledItemText(bool enabled) =>
+        enabled ? "فعال (F10)" : "غیرفعال (F10)";
 
     private void ToggleLogging(object? sender, EventArgs e)
     {
