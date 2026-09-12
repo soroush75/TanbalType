@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Auto-fix Persian/English keyboard layout on Windows")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.4.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.4.0+6a927754ae0031c9fb286cfe3f2d2e88b2c1c501")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.4.0+c1a317abbf0a6b8cb843f2b6992dd3ce07c0ca42")]
 [assembly: System.Reflection.AssemblyProductAttribute("TanbalType")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TanbalType")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.4.0.0")]

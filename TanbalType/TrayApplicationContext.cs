@@ -49,6 +49,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         menu.Items.Add(_enabledItem);
         menu.Items.Add(_logEnabledItem);
         menu.Items.Add("لغات استثنا...", null, (_, _) => ShowExceptionsWindow());
+        menu.Items.Add("لغات شخصی...", null, (_, _) => ShowUserWordsWindow());
         menu.Items.Add(_startupItem);
         menu.Items.Add("نمایش log", null, (_, _) => AppLog.OpenPrimaryLog());
         menu.Items.Add("درباره برنامه", null, ShowAboutWindow);
@@ -195,6 +196,20 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         _exceptionsForm = new ExceptionsForm();
         _exceptionsForm.Show();
+    }
+
+    private UserWordsForm? _userWordsForm;
+
+    private void ShowUserWordsWindow()
+    {
+        if (_userWordsForm is { IsDisposed: false })
+        {
+            _userWordsForm.Activate();
+            return;
+        }
+
+        _userWordsForm = new UserWordsForm();
+        _userWordsForm.Show();
     }
 
     private void ShowAboutWindow(object? sender, EventArgs e)

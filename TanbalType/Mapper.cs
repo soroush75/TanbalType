@@ -90,6 +90,13 @@ public static class Mapper
         return new string(result);
     }
 
+    /// <summary>
+    /// همان متن، اگر با چیدمانِ مقابل تایپ می‌شد چه شکلی می‌شد.
+    /// (برای نمایشِ «شکلِ اشتباهِ» یک لغت به کاربر)
+    /// </summary>
+    public static string SwapLayout(string text) =>
+        CountPersian(text) > 0 ? PersianToEnKeys(text) : EnKeysToPersian(text);
+
     public static int CountEnLayoutKeys(string text) =>
         text.Count(ch => EnLayoutKeys.Contains(ch));
 

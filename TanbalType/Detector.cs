@@ -314,19 +314,47 @@ public static class Detector
         if (word.Length < 2)
             return null;
 
+        // کلمات استثنایی که کاربر خودش اضافه کرده هرگز اصلاح نمی‌شوند
+        if (UserExceptions.IsException(word))
+            return null;
+
+        // لغاتی که کاربر خودش ثبت کرده بر بقیهٔ قاعده‌ها (از جمله محدودیتِ اعداد) اولویت دارند
+        if (TryResolveUserWord(word, currentLayoutIsPersian, out var userWord))
+            return userWord;
+
         // اعداد را هرگز اصلاح نمی‌کنیم: رمز عبور، کد، شماره، سال، نسخه و ... نباید تغییر کنند.
         // (char.IsDigit شاملِ ارقام فارسی ۰-۹ و عربی هم می‌شود)
         if (word.Any(char.IsDigit))
-            return null;
-
-        // کلمات استثنایی که کاربر خودش اضافه کرده هرگز اصلاح نمی‌شوند
-        if (UserExceptions.IsException(word))
             return null;
 
         if (currentLayoutIsPersian)
             return DetectEnglishIntendedOnPersianLayout(word);
 
         return DetectPersianIntendedOnEnglishLayout(word);
+    }
+
+    /// <summary>
+    /// فهرستِ لغاتِ شخصیِ کاربر: اگر کلمه همان چیزی باشد که کاربر ثبت کرده دست‌نخورده می‌ماند،
+    /// و اگر شکلِ تایپ‌شده با چیدمانِ اشتباهِ آن باشد، دقیقاً به شکلِ ثبت‌شده اصلاح می‌شود.
+    /// خروجیِ <c>true</c> یعنی تکلیف کلمه روشن شد و قاعده‌های حدسی نباید اجرا شوند.
+    /// </summary>
+    private static bool TryResolveUserWord(string word, bool currentLayoutIsPersian, out string? result)
+    {
+        result = null;
+
+        // کاربر همین کلمه را ثبت کرده، پس درست تایپ شده است
+        if (UserWords.IsUserWord(word))
+            return true;
+
+        var mapped = currentLayoutIsPersian
+            ? Mapper.PersianToEnKeys(word)
+            : Mapper.EnKeysToPersian(word);
+
+        if (!UserWords.TryGetCanonical(mapped, out var canonical))
+            return false;
+
+        result = canonical;
+        return true;
     }
 
     private static string? DetectEnglishIntendedOnPersianLayout(string word)
