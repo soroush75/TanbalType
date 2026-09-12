@@ -319,6 +319,10 @@ public static class Detector
         if (word.Any(char.IsDigit))
             return null;
 
+        // کلمات استثنایی که کاربر خودش اضافه کرده هرگز اصلاح نمی‌شوند
+        if (UserExceptions.IsException(word))
+            return null;
+
         if (currentLayoutIsPersian)
             return DetectEnglishIntendedOnPersianLayout(word);
 
@@ -332,6 +336,9 @@ public static class Detector
             return null;
 
         var mappedEn = Mapper.PersianToEnKeys(word);
+
+        if (UserExceptions.IsException(mappedEn))
+            return null;
 
         // اگر روی حالت فارسی آدرس یا نام سایت تایپ شده باشد، به انگلیسی برمی‌گردد
         if (ShouldConvertToWebAddress(mappedEn))
@@ -376,6 +383,10 @@ public static class Detector
             return null;
 
         var mappedFa = Mapper.EnKeysToPersian(word);
+
+        if (UserExceptions.IsException(mappedFa))
+            return null;
+
         var match = LookupPersian(mappedFa);
         var englishScore = ScoreIntentionalEnglish(word);
 

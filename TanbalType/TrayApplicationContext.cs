@@ -48,6 +48,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         var menu = new ContextMenuStrip();
         menu.Items.Add(_enabledItem);
         menu.Items.Add(_logEnabledItem);
+        menu.Items.Add("لغات استثنا...", null, (_, _) => ShowExceptionsWindow());
         menu.Items.Add(_startupItem);
         menu.Items.Add("نمایش log", null, (_, _) => AppLog.OpenPrimaryLog());
         menu.Items.Add("درباره برنامه", null, ShowAboutWindow);
@@ -181,6 +182,20 @@ internal sealed class TrayApplicationContext : ApplicationContext
     }
 
     // ------------------------------------
+
+    private ExceptionsForm? _exceptionsForm;
+
+    private void ShowExceptionsWindow()
+    {
+        if (_exceptionsForm is { IsDisposed: false })
+        {
+            _exceptionsForm.Activate();
+            return;
+        }
+
+        _exceptionsForm = new ExceptionsForm();
+        _exceptionsForm.Show();
+    }
 
     private void ShowAboutWindow(object? sender, EventArgs e)
     {
