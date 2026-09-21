@@ -1,0 +1,21 @@
+# Arch Linux / Manjaro:
+#   فایل TanbalType-linux-VERSION.tar.gz را کنار این فایل بگذارید و اجرا کنید:  makepkg -si
+pkgname=tanbaltype
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="Fixes text typed with the wrong keyboard layout (Persian <-> English)"
+arch=('any')
+url="https://github.com/soroush75/TanbalType"
+license=('GPL-3.0-or-later')
+depends=('python')
+optdepends=('python-gobject: tray icon'
+            'libayatana-appindicator: tray icon'
+            'libnotify: notifications')
+install=tanbaltype.install
+source=("TanbalType-linux-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+    cd "TanbalType-linux-$pkgver"
+    python3 tools/stage.py --root "$pkgdir" --prefix /usr
+}

@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+if [ "$1" = "remove" ]; then
+    pkill -f "tanbaltype( run| tray|\.cli)" >/dev/null 2>&1 || true
+fi
+rm -rf /usr/lib/tanbaltype/tanbaltype/__pycache__
+exit 0

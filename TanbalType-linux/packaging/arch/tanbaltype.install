@@ -1,0 +1,17 @@
+post_install() {
+    python3 -m compileall -q /usr/lib/tanbaltype >/dev/null 2>&1
+    modprobe uinput >/dev/null 2>&1
+    udevadm control --reload-rules >/dev/null 2>&1
+    udevadm trigger --subsystem-match=misc --sysname-match=uinput >/dev/null 2>&1
+    udevadm trigger --subsystem-match=input --action=change >/dev/null 2>&1
+    echo "TanbalType: tanbaltype start"
+}
+
+post_upgrade() {
+    post_install
+}
+
+pre_remove() {
+    pkill -f "tanbaltype( run| tray|\.cli)" >/dev/null 2>&1
+    rm -rf /usr/lib/tanbaltype/tanbaltype/__pycache__
+}

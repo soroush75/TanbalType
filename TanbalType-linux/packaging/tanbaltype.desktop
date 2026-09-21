@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=TanbalType
+GenericName=Keyboard layout auto-corrector
+GenericName[fa]=اصلاح خودکار زبان کیبورد
+Comment=Fixes text typed with the wrong keyboard layout (Persian ⇄ English)
+Comment[fa]=متنی را که با زبان اشتباه کیبورد تایپ شده خودکار اصلاح می‌کند (فارسی ⇄ انگلیسی)
+Exec=tanbaltype start
+Icon=tanbaltype
+Terminal=false
+Categories=Utility;Accessibility;
+Keywords=keyboard;layout;persian;farsi;کیبورد;فارسی;

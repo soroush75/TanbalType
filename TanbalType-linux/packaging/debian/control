@@ -1,0 +1,18 @@
+Package: tanbaltype
+Version: @VERSION@
+Architecture: all
+Maintainer: Soroush Sarmast <soroushsarmast@gmail.com>
+Installed-Size: @SIZE@
+Depends: python3 (>= 3.8)
+Recommends: python3-gi, gir1.2-gtk-3.0, gir1.2-ayatanaappindicator3-0.1 | gir1.2-appindicator3-0.1, libnotify-bin
+Suggests: gnome-shell-extension-appindicator
+Section: utils
+Priority: optional
+Homepage: https://github.com/soroush75/TanbalType
+Description: fixes text typed with the wrong keyboard layout (Persian <-> English)
+ TanbalType watches what you type and, when a word was typed with the wrong
+ keyboard layout (e.g. "sghl" instead of "سلام"), replaces it with the
+ intended word and switches the keyboard layout. Works on X11 and Wayland
+ (GNOME, KDE Plasma, Cinnamon, MATE, XFCE, Sway, Hyprland, ...).
+ .
+ On servers the "tanbaltype convert" command converts text in the terminal.

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=TanbalType
+Comment=Fixes text typed with the wrong keyboard layout (Persian ⇄ English)
+Exec=tanbaltype start
+Icon=tanbaltype
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=3
+X-KDE-autostart-after=panel

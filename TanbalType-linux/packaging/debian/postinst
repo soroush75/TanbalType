@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+    python3 -m compileall -q /usr/lib/tanbaltype >/dev/null 2>&1 || true
+    # دسترسی به کیبورد: بدون نیاز به ری‌استارت فعال می‌شود
+    modprobe uinput >/dev/null 2>&1 || true
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules >/dev/null 2>&1 || true
+        udevadm trigger --subsystem-match=misc --sysname-match=uinput >/dev/null 2>&1 || true
+        udevadm trigger --subsystem-match=input --action=change >/dev/null 2>&1 || true
+    fi
+    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+        gtk-update-icon-cache -q -t /usr/share/icons/hicolor >/dev/null 2>&1 || true
+    fi
+    echo "TanbalType نصب شد. از منوی برنامه‌ها اجرا کنید یا دستور: tanbaltype start"
+fi
+exit 0
