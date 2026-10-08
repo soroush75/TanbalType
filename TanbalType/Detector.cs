@@ -158,7 +158,22 @@ public static class Detector
         // --- واژه‌های کوتاه پرکاربرد که با فارسیِ نادر تداخل داشتند ---
         "big", "add", "avg", "off", "min", "max", "sum", "tmp", "temp", "demo", "root",
         "home", "work", "edit", "view", "tool", "menu", "back", "next", "prev", "play",
-        "live", "free", "half", "auto", "call", "send", "down", "yes", "bye", "end"
+        "live", "free", "half", "auto", "call", "send", "down", "yes", "bye", "end",
+
+        // --- لغات انگلیسیِ پرکاربرد که تصویرِ فارسی‌شان واژهٔ فارسی نیست ---
+        // سویپ روی ۱۰٬۰۰۰ واژهٔ پربسامد انگلیسی نشان داد این‌ها اشتباهاً فارسی می‌شدند
+        // (مثلاً hand → «اشدی»، hill → «اهمم»، military → «ئهمهفشقغ»). برخلاف دستهٔ
+        // قبل، این‌ها با حذف از لغت‌نامه حل نمی‌شدند چون مسدودکننده یا ریشهٔ واقعیِ
+        // فارسی بود («اشد»+«ی») یا اصلاً لغت‌نامه دخیل نبود و نمره‌دهی تصمیم می‌گرفت.
+        // واژه‌هایی که تصویرِ فارسی‌شان واقعاً معنادار است (fun→«بعد»، leg→«مثل»،
+        // col→«زخم»، oct→«خزف»، til→«فهم») عمداً این‌جا نیستند تا اصلاحِ آن واژهٔ
+        // فارسی از بین نرود.
+        "high", "highly", "highs", "highland", "hand", "legal", "child", "kids", "gold", "aug", "via",
+        "held", "hell", "military", "kind", "band", "fall", "fill", "hill", "hull", "hold", "told",
+        "toll", "fold", "tall", "valid", "solid", "civil", "facility", "wild", "milk", "mild", "silk",
+        "sand", "grid", "fig", "lid", "gel", "lan", "nokia", "andy", "jill", "lucia", "possibility",
+        "probability", "stability", "flexibility", "mobility", "roughly", "thoroughly", "rand", "ghz", "msg", "dns", "cia",
+        "hung"
     };
 
     // کلمات محاوره‌ای فارسی که در فایل لغت‌نامه نیستند ولی در تایپ روزمره زیاد استفاده می‌شوند

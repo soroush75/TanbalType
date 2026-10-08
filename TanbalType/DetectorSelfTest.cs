@@ -55,7 +55,15 @@ internal static class DetectorSelfTest
          "digikala", "aparat", "divar", "snapp", "torob", "sheypoor", "varzesh3", "filimo",
          "cafebazaar", "zarinpal", "www.aparat.com", "youtube", "instagram", "telegram",
          // کلمات محاوره‌ای چت و فینگلیش
-         "lol", "btw", "thx", "okay", "yeah", "gonna", "salam", "mamnoon", "chetori", "kheili", "azizam"];
+         "lol", "btw", "thx", "okay", "yeah", "gonna", "salam", "mamnoon", "chetori", "kheili", "azizam",
+         // لغات پرکاربردی که تصویرِ فارسی‌شان واژهٔ فارسی نیست و اشتباهاً اصلاح می‌شدند
+         // («hand» را کاربر گزارش کرد؛ بقیه با سویپ روی ۱۰٬۰۰۰ واژهٔ پربسامد پیدا شدند)
+         "hand", "high", "highly", "child", "military", "kind", "hold", "hill", "fall", "fill",
+         "gold", "art", "dvd", "usa", "low", "far", "loss", "tel", "tell", "kids", "band",
+         "sand", "milk", "silk", "wild", "mild", "valid", "solid", "civil", "legal", "guard",
+         "yard", "tall", "hull", "hell", "held", "told", "toll", "fold", "grid", "lan",
+         "possibility", "probability", "stability", "flexibility", "roughly", "thoroughly",
+         "dns", "msg", "ghz", "rand", "via", "aug", "fig", "gel", "lid", "cia", "hung"];
 
     public static void RunAndLog()
     {
