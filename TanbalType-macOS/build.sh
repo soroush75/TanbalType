@@ -67,15 +67,11 @@ echo "==> self-test"
 ZIP="$BUILD/TanbalType-macOS-$VERSION.zip"
 rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
-# فایل نصبی DMG: برنامه + میان‌بر Applications برای نصب با کشیدن و رها کردن
+# فایل نصبی DMG: پنجره‌ای با آیکن برنامه و میان‌بر Applications، برای نصب با
+# کشیدن و رها کردن. چیدمان و پس‌زمینه در make-dmg.sh است تا بتوان بسته‌بندی را
+# بدون بیلدِ دوبارهٔ برنامه هم اجرا کرد.
 DMG="$BUILD/TanbalType-macOS-$VERSION.dmg"
-STAGE="$BUILD/dmg"
-rm -rf "$STAGE" "$DMG"
-mkdir -p "$STAGE"
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "TanbalType $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
-rm -rf "$STAGE"
+bash ./make-dmg.sh --app "$APP" --out "$DMG"
 
 echo "==> $APP"
 echo "==> $ZIP"

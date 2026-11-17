@@ -13,3 +13,8 @@ C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\R
 C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.pdb
 C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\TanbalType.genruntimeconfig.cache
 C:\Users\sorou\Downloads\Telegram Desktop\TanbalType\TanbalType\TanbalType\obj\Release\net8.0-windows\ref\TanbalType.dll
+C:\Users\sorou\AppData\Local\Temp\claude\C--Users-sorou-Downloads-Telegram-Desktop-TanbalType-TanbalType\59723858-4e33-49d7-81ac-1ad67c6bdeec\scratchpad\outbuild\TanbalType.exe
+C:\Users\sorou\AppData\Local\Temp\claude\C--Users-sorou-Downloads-Telegram-Desktop-TanbalType-TanbalType\59723858-4e33-49d7-81ac-1ad67c6bdeec\scratchpad\outbuild\TanbalType.deps.json
+C:\Users\sorou\AppData\Local\Temp\claude\C--Users-sorou-Downloads-Telegram-Desktop-TanbalType-TanbalType\59723858-4e33-49d7-81ac-1ad67c6bdeec\scratchpad\outbuild\TanbalType.runtimeconfig.json
+C:\Users\sorou\AppData\Local\Temp\claude\C--Users-sorou-Downloads-Telegram-Desktop-TanbalType-TanbalType\59723858-4e33-49d7-81ac-1ad67c6bdeec\scratchpad\outbuild\TanbalType.dll
+C:\Users\sorou\AppData\Local\Temp\claude\C--Users-sorou-Downloads-Telegram-Desktop-TanbalType-TanbalType\59723858-4e33-49d7-81ac-1ad67c6bdeec\scratchpad\outbuild\TanbalType.pdb

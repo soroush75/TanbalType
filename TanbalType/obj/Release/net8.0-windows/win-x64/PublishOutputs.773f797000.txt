@@ -1,0 +1,4 @@
+C:\Users\sorou\AppData\Local\Temp\claude\1fff909fa887d0fc\87c0520e-b5b8-47f9-969f-c12339e87e2a\scratchpad\payload\TanbalType.exe
+C:\Users\sorou\AppData\Local\Temp\claude\1fff909fa887d0fc\87c0520e-b5b8-47f9-969f-c12339e87e2a\scratchpad\payload\TanbalType.deps.json
+C:\Users\sorou\AppData\Local\Temp\claude\1fff909fa887d0fc\87c0520e-b5b8-47f9-969f-c12339e87e2a\scratchpad\payload\TanbalType.runtimeconfig.json
+C:\Users\sorou\AppData\Local\Temp\claude\1fff909fa887d0fc\87c0520e-b5b8-47f9-969f-c12339e87e2a\scratchpad\payload\TanbalType.dll

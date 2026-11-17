@@ -13,6 +13,12 @@ SCORE_MARGIN = 0.12
 STRONG_ENGLISH_THRESHOLD = 0.45
 STRONG_PERSIAN_THRESHOLD = 0.35
 
+# کمینهٔ طولِ توکن برای اصلاح، وقتی نمی‌دانیم آغازِ کلمه کجاست — یعنی کاربر در ادامهٔ متنی که از
+# قبل آن‌جا بوده تایپ کرده و فاصله‌ای در میان نیست. پایانِ کوتاهِ کلماتِ انگلیسی («ing» در
+# engineering، «nd»، «ard») و تکه‌های کوتاهِ فارسی («اث» در «احداث») تصویرِ زبانِ دیگر را دارند
+# و نباید اصلاح شوند.
+MIN_UNANCHORED_LENGTH = 4
+
 with open(os.path.join(paths.PACKAGE_DIR, 'detector_data.json'), encoding='utf-8') as _f:
     DATA = json.load(_f)
 
@@ -24,6 +30,7 @@ _common_two_letter_persian = frozenset(DATA['commonTwoLetterPersian'])
 _persian_markers = DATA['persianMarkers']
 _english_clusters = DATA['englishClusters']
 _persian_bigrams = frozenset(DATA['persianBigramList'])
+_english_word_endings = frozenset(DATA['englishWordEndings'])
 
 _persian_words = None
 _load_lock = threading.Lock()
@@ -91,8 +98,16 @@ def _is_digit(ch):
     return unicodedata.category(ch) == 'Nd'
 
 
-def detect_wrong_layout(text, current_layout_is_persian):
-    """اگر کلمه با چیدمان اشتباه تایپ شده باشد، شکل درستش را برمی‌گرداند؛ وگرنه None."""
+def detect_wrong_layout(text, current_layout_is_persian, word_start_known=True):
+    """اگر کلمه با چیدمان اشتباه تایپ شده باشد، شکل درستش را برمی‌گرداند؛ وگرنه None.
+
+    word_start_known: آیا مطمئنیم همین‌جا آغازِ کلمه است؟ یعنی می‌دانیم پیش از این توکن
+    فاصله/اینتر بوده، نه یک حرفِ دیگر. وقتی کاربر با ماوس جای مکان‌نما را برده، میان‌بری زده،
+    کلیدِ جهتی فشرده یا برنامه تازه بالا آمده، آن‌چه پیش از توکن است نامعلوم می‌مانَد؛ آن‌وقت
+    توکن می‌تواند تکهٔ پایانیِ کلمه‌ای باشد که از قبل نوشته شده («engineer» + «ing») و اصلاحش
+    متنِ درست را خراب می‌کند. در آن حالت فقط شواهدِ قطعی پذیرفته می‌شود و حدس‌های نمره‌ای
+    کنار می‌رود.
+    """
     word = text.strip()
     if len(word) < 2:
         return None
@@ -115,11 +130,11 @@ def detect_wrong_layout(text, current_layout_is_persian):
         return None
 
     if current_layout_is_persian:
-        return _detect_english_intended_on_persian_layout(word)
-    return _detect_persian_intended_on_english_layout(word)
+        return _detect_english_intended_on_persian_layout(word, word_start_known)
+    return _detect_persian_intended_on_english_layout(word, word_start_known)
 
 
-def _detect_english_intended_on_persian_layout(word):
+def _detect_english_intended_on_persian_layout(word, word_start_known):
     # کلمهٔ لغت‌نامه‌ای یا کلمه‌ای با پسوند چسبان — فارسیِ عمدی است
     if _is_known_persian_word(word):
         return None
@@ -130,11 +145,20 @@ def _detect_english_intended_on_persian_layout(word):
         return None
 
     # اگر روی حالت فارسی آدرس یا نام سایت تایپ شده باشد، به انگلیسی برمی‌گردد
-    if _should_convert_to_web_address(mapped_en):
+    if _should_convert_to_web_address(word, mapped_en):
         return mapped_en
+
+    # تکهٔ ناتمام: «اث» (در «احداث») تصویرِ «he» را دارد و «اشقی» (در «عاشقی») تصویرِ «hard» را؛
+    # تکه‌های کوتاه در این حالت دست‌نخورده می‌مانند.
+    if not word_start_known and len(word) < MIN_UNANCHORED_LENGTH:
+        return None
 
     if _is_english_word(mapped_en):
         return mapped_en
+
+    # از این‌جا به بعد تصمیم بر پایهٔ نمره است نه فهرست؛ برای تکهٔ ناتمام کافی نیست.
+    if not word_start_known:
+        return None
 
     length = float(len(word))
     if mapper.count_persian(word) >= length * 0.75:
@@ -156,7 +180,7 @@ def _detect_english_intended_on_persian_layout(word):
     return None
 
 
-def _detect_persian_intended_on_english_layout(word):
+def _detect_persian_intended_on_english_layout(word, word_start_known):
     # کاربر در حال وارد کردن آدرس یا نام سایت است — نباید به فارسی تبدیل شود
     if _is_probably_web_input(word):
         return None
@@ -172,6 +196,10 @@ def _detect_persian_intended_on_english_layout(word):
     if exceptions.is_exception(mapped_fa):
         return None
 
+    # تکهٔ ناتمام: «ing» (در «engineering») تصویرِ «هدل» را دارد و «nd» تصویرِ «دی».
+    if not word_start_known and not _is_safe_unanchored(word):
+        return None
+
     match = _lookup_persian(mapped_fa)
     english_score = _score_intentional_english(word)
 
@@ -183,10 +211,18 @@ def _detect_persian_intended_on_english_layout(word):
     if match == WEAK and english_score >= STRONG_ENGLISH_THRESHOLD:
         match = NONE
 
+    # تطبیقِ ضعیف شاهدِ قطعی نیست، پس برای تکهٔ ناتمام هم کافی نیست.
+    if match == WEAK and not word_start_known:
+        match = NONE
+
     if match != NONE:
         return mapped_fa
 
     if english_score >= STRONG_ENGLISH_THRESHOLD:
+        return None
+
+    # از این‌جا به بعد تصمیم بر پایهٔ نمره است نه لغت‌نامه؛ برای تکهٔ ناتمام کافی نیست.
+    if not word_start_known:
         return None
 
     persian_score = _score_persian_on_english_keys(word)
@@ -194,6 +230,32 @@ def _detect_persian_intended_on_english_layout(word):
         return mapped_fa
 
     return None
+
+
+def _is_safe_unanchored(word):
+    """آیا این توکن، بی‌آنکه بدانیم آغازِ کلمه است، به‌اندازهٔ کافی ایمن است که اصلاح شود؟
+
+    پایانِ کلماتِ انگلیسی («ing»، «ther») و تکه‌های کوتاه نه؛ توکنِ بلند یا توکنی که شکلِ کلمهٔ
+    انگلیسی ندارد («o,f» → «خوب») بله.
+    """
+    if word.lower() in _english_word_endings:
+        return False
+    return len(word) >= MIN_UNANCHORED_LENGTH or _has_non_english_word_shape(word)
+
+
+def _has_non_english_word_shape(word):
+    """آیا این توکنِ ASCII نشانه‌ای دارد که داخلِ یک کلمهٔ انگلیسی دیده نمی‌شود؟
+
+    حروفِ «و ک گ ج چ» روی کلیدهای «, ; ' [ ]» می‌نشینند، پس «o,f» («خوب») هیچ‌گاه پایانِ یک
+    کلمهٔ انگلیسی نیست و بی‌خطر اصلاح می‌شود. حرفِ بزرگ در میانهٔ توکن هم همین معنی را دارد
+    (Shift برای «آ»، «ژ» و ... زده شده است).
+    """
+    for i, ch in enumerate(word):
+        if not (ch.isascii() and ch.isalpha()):
+            return True
+        if i > 0 and ch.isupper():
+            return True
+    return False
 
 
 def _is_probably_web_input(word):
@@ -209,7 +271,24 @@ def _is_probably_web_input(word):
     return _is_known_site_name(word)
 
 
-def _should_convert_to_web_address(mapped_en):
+def _is_dotted_persian_text(word):
+    """دو واژهٔ فارسیِ چسبیده به نقطه («سلام.شب») — شکلِ دامنه دارد ولی آدرس نیست.
+
+    بخشِ دوحرفی فقط اگر از واژه‌های پرکاربرد باشد؛ ورودی‌های دوحرفیِ لغت‌نامه بیشترشان
+    نویزند و با پسوندهای دوحرفیِ دامنه تداخل می‌کنند («of.tv» → «خب.فر»).
+    """
+    parts = [p for p in word.split('.') if p]
+    if len(parts) < 2:
+        return False
+    for part in parts:
+        known = (part in _common_two_letter_persian if len(part) == 2
+                 else _is_known_persian_word(part))
+        if not known:
+            return False
+    return True
+
+
+def _should_convert_to_web_address(word, mapped_en):
     """آیا متن نگاشت‌شده از حالت فارسی، یک آدرس/نام سایت واقعی است؟ (سخت‌گیری زیاد)"""
     if _is_known_site_name(mapped_en):
         return True
@@ -217,7 +296,11 @@ def _should_convert_to_web_address(mapped_en):
         return False
     if mapped_en.lower().startswith('www.') and len(mapped_en) >= 8:
         return True
-    return _has_domain_suffix(mapped_en) and mapper.count_ascii_letters(mapped_en) >= 4
+    # این‌جا متنِ کاربر عوض می‌شود، پس صرفِ «حرف.حرف» کافی نیست: دو واژهٔ فارسیِ چسبیده
+    # به نقطه هم همان شکل را دارد («سلام.شب» → sghl.af)
+    return (_has_domain_suffix(mapped_en)
+            and mapper.count_ascii_letters(mapped_en) >= 4
+            and not _is_dotted_persian_text(word))
 
 
 def _has_domain_suffix(text):

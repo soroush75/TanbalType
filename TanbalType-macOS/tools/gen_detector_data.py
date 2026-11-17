@@ -17,7 +17,7 @@ OUT = os.path.join(ROOT, 'Sources', 'Generated', 'DetectorData.swift')
 
 # (فایل C#، نام فیلد در C#، نام در Swift، نوع Swift)
 FIELDS = [
-    ('Detector.cs', 'DomainSuffixes', 'domainSuffixes', 'array'),
+    ('Detector.cs', 'KnownTlds', 'domainSuffixes', 'array'),
     ('Detector.cs', 'SiteNames', 'siteNames', 'lowerset'),
     ('Detector.cs', 'EnglishWords', 'englishWords', 'lowerset'),
     ('Detector.cs', 'PersianColloquial', 'persianColloquial', 'array'),
@@ -26,12 +26,16 @@ FIELDS = [
     ('Detector.cs', 'PersianMarkers', 'persianMarkers', 'array'),
     ('Detector.cs', 'PersianBigramList', 'persianBigramList', 'array'),
     ('Detector.cs', 'EnglishClusters', 'englishClusters', 'array'),
+    ('Detector.cs', 'EnglishWordEndings', 'englishWordEndings', 'lowerset'),
     ('DetectorSelfTest.cs', 'EnglishOnFaLayout', 'englishOnFaLayout', 'array'),
     ('DetectorSelfTest.cs', 'PersianOnEnLayout', 'persianOnEnLayout', 'array'),
     ('DetectorSelfTest.cs', 'PersianShouldNotFix', 'persianShouldNotFix', 'array'),
     ('DetectorSelfTest.cs', 'SiteNamesShouldNotFix', 'siteNamesShouldNotFix', 'array'),
     ('DetectorSelfTest.cs', 'DigitTokensShouldNotFix', 'digitTokensShouldNotFix', 'array'),
     ('DetectorSelfTest.cs', 'EnglishShouldNotFix', 'englishShouldNotFix', 'array'),
+    ('DetectorSelfTest.cs', 'EnFragmentsShouldNotFix', 'enFragmentsShouldNotFix', 'array'),
+    ('DetectorSelfTest.cs', 'FaFragmentsShouldNotFix', 'faFragmentsShouldNotFix', 'array'),
+    ('DetectorSelfTest.cs', 'UnanchoredShouldStillFix', 'unanchoredShouldStillFix', 'array'),
 ]
 
 
@@ -69,6 +73,19 @@ def extract(src, name):
     if not m:
         sys.exit(f'field {name} not found')
     start = m.end()
+
+    # KnownTlds فهرستِ معمولی نیست: به‌شکل BuildTldSet("ir com net ...") نوشته شده،
+    # یعنی پسوندها داخلِ یک رشتهٔ فاصله‌جدا بسته‌بندی شده‌اند (چند رشته که با + به هم
+    # چسبیده‌اند). مصرف‌کنندهٔ پورت‌ها endswith('.com') می‌کند، پس نقطه همین‌جا
+    # گذاشته می‌شود تا شکلِ فهرستِ قبلی (DomainSuffixes) دست‌نخورده بماند.
+    if re.match(r'\s*BuildTldSet\s*\(', src[start:]):
+        packed = ' '.join(re.findall(r'"([^"]*)"',
+                                     src[src.index('(', start) + 1:src.index(')', start)]))
+        items = ['.' + tld for tld in packed.split()]
+        if not items:
+            sys.exit(f'field {name} is empty')
+        return items
+
     # اولین { یا [ بعد از = شروع فهرست است؛ تا بستهٔ متناظرش جلو می‌رویم
     open_idx = min(i for i in (src.find('{', start), src.find('[', start)) if i >= 0)
     opener = src[open_idx]

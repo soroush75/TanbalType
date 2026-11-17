@@ -25,7 +25,14 @@ final class EventTap {
     func install() -> Bool {
         if tap != nil { return true }
 
-        let mask = CGEventMask(1 << CGEventType.keyDown.rawValue) | CGEventMask(1 << CGEventType.keyUp.rawValue)
+        // فشردنِ دکمه‌های ماوس هم پاییده می‌شود: یک کلیک می‌تواند مکان‌نما را جای دیگری —
+        // مثلاً وسط یا انتهای کلمه‌ای که از قبل نوشته شده — ببرد. (چرخِ ماوس مکان‌نما را
+        // جابه‌جا نمی‌کند، پس در mask نیست.)
+        let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+            | CGEventMask(1 << CGEventType.keyUp.rawValue)
+            | CGEventMask(1 << CGEventType.leftMouseDown.rawValue)
+            | CGEventMask(1 << CGEventType.rightMouseDown.rawValue)
+            | CGEventMask(1 << CGEventType.otherMouseDown.rawValue)
         let callback: CGEventTapCallBack = { _, type, event, refcon in
             guard let refcon else { return Unmanaged.passUnretained(event) }
             let tap = Unmanaged<EventTap>.fromOpaque(refcon).takeUnretainedValue()
@@ -69,6 +76,14 @@ final class EventTap {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             AppLog.write("Event tap disabled (\(type.rawValue)), re-enabling")
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            return Unmanaged.passUnretained(event)
+        }
+
+        // کلیک: بافر بی‌اعتبار می‌شود. اصلاح بر پایهٔ بافرِ کهنه هم کلمهٔ درست را خراب می‌کند
+        // («engineer» + «ing» → «engineerهدل») و هم ممکن است چند حرفِ متنِ قبلی را پاک کند.
+        // این شاخه پیش از هر کارِ دیگری برمی‌گردد چون callback باید سریع تمام شود.
+        if type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
+            service.invalidateBuffer()
             return Unmanaged.passUnretained(event)
         }
 

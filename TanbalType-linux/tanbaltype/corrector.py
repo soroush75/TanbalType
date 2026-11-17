@@ -30,13 +30,23 @@ class Corrector:
         self._persian_table = keymaps.persian_table('pes')
         self._mods = set()        # modifierهایی که الان پایین نگه داشته شده‌اند
         self._swallowed = set()   # کلیدهایی که press آن‌ها مصرف شد؛ release هم باید مصرف شود
+        # درخواستِ دورریختنِ بافر از بیرونِ مسیرِ کلیدها (کلیکِ ماوس) — توضیح در invalidate_buffer
+        self._invalidate_requested = False
         self.reset()
 
     # ------------------------------------------------------------ وضعیت
 
     def reset(self):
+        """بافر پاک می‌شود و «آغازِ کلمه» نامعلوم می‌شود: از این پس نمی‌دانیم پیش از آنچه کاربر
+        می‌نویسد فاصله بوده یا حرفی از یک کلمهٔ نیمه‌تمام."""
         self._buffer = []
         self._last_delimiter = None
+        # آیا می‌دانیم آنچه در بافر است از آغازِ یک کلمه شروع شده؟ بافر تنها تا زمانی با متنِ
+        # واقعیِ پیشِ مکان‌نما می‌خواند که کاربر پشتِ‌سرهم تایپ کند؛ با کلیکِ ماوس، کلیدهای جهت
+        # یا میان‌برها مکان‌نما می‌تواند وسطِ کلمه‌ای باشد که از قبل نوشته شده. آن‌وقت «ing» که
+        # کاربر به «engineer» می‌چسباند به‌تنهایی سنجیده می‌شود و «هدل» از آن درمی‌آید؛ پس این
+        # پرچم False می‌شود و detector فقط شواهدِ قطعی را می‌پذیرد.
+        self._word_start_known = False
 
     def set_persian_table(self, name):
         if name != self.persian_table_name:
@@ -83,10 +93,22 @@ class Corrector:
             return not grabbed
 
         if not self.enabled or self.suspended:
+            # برنامه خاموش است یا پنجرهٔ خودِ برنامه فعال است: در این مدت کلیدها شمرده نمی‌شوند،
+            # پس بافر بی‌اعتبار می‌شود و با اولین کلیدِ بعدی از صفر شروع می‌کنیم
+            self._invalidate_requested = True
             return True
 
+        # کلیکِ ماوس از مسیری دیگر خبر داده است؛ همین‌جا — نه داخلِ خودِ هندلرِ ماوس — بافر دور
+        # ریخته می‌شود.
+        if self._invalidate_requested:
+            self._invalidate_requested = False
+            self.reset()
+
         if self._mods & COMMAND_MODIFIERS:
-            # میان‌برها (Ctrl+V، Alt+Tab، ...) متن یا پنجره را عوض می‌کنند
+            # میان‌برها (Ctrl+V، Ctrl+Z، Alt+Tab، ...) هر کاری می‌توانند بکنند — چسباندن، undo،
+            # عوض‌کردنِ پنجره — پس پس از آن معلوم نیست چه متنی پیشِ مکان‌نما نشسته است.
+            # (فشردنِ تنهای Ctrl/Alt/Super — و Alt+Shift برای تعویض زبان — بالاتر در شاخهٔ
+            #  MODIFIERS برمی‌گردد و بافر را دست نمی‌زند.)
             self.reset()
             return True
 
@@ -97,8 +119,10 @@ class Corrector:
             if self._buffer:
                 self._buffer.pop()
             else:
-                # کلمه پاک شد و به فضای خالی رسیدیم؛ حافظهٔ جداکنندهٔ قبلی ریست می‌شود
+                # پاک‌کردن از پیشِ بافر: آن حرف را ما نشمرده‌ایم، پس نه می‌دانیم چه بوده و نه
+                # چه چیزی پیش‌تر از آن مانده است
                 self._last_delimiter = None
+                self._word_start_known = False
             return True
 
         if code in DELIMITERS:
@@ -107,7 +131,11 @@ class Corrector:
                 self._buffer = []
                 return True
             if value != 1:
-                self.reset()
+                # تکرار خودکارِ جداکننده: فقط جداکنندهٔ بیشتری تایپ می‌شود، پس بافر خالی و
+                # «آغازِ کلمه» معلوم می‌مانَد (کاراکترِ پیشِ مکان‌نما همین جداکننده است)
+                self._buffer = []
+                self._last_delimiter = None
+                self._word_start_known = True
                 return True
             return self._on_delimiter(code, grabbed)
 
@@ -117,13 +145,21 @@ class Corrector:
             self._buffer.append((code, shift, self.caps))
             return True
 
-        # جهت‌نماها، Home/End، Delete، Esc و ...: مکان‌نما جابه‌جا شده
+        # کلیدهای جهت و ویرایش (keymaps.CARET_KEYS: چهار جهت، Home/End، PageUp/PageDown،
+        # Insert، Delete، Esc) و هر کلیدِ ناشناختهٔ دیگر: مکان‌نما جابه‌جا شده یا متنِ اطرافش عوض
+        # شده، و از آن پس بافر با متنِ پیشِ مکان‌نما نمی‌خواند
         self.reset()
         return True
 
-    def reset_pointer(self):
-        """کلیک موس: مکان‌نما جابه‌جا شده است."""
-        self.reset()
+    def invalidate_buffer(self):
+        """کلیکِ ماوس: مکان‌نما ممکن است جابه‌جا شده باشد، پس بافر و دانستهٔ ما دربارهٔ متنِ پیشِ
+        آن بی‌اعتبار است.
+
+        این‌جا عمداً کاری انجام نمی‌شود جز ست‌کردنِ یک پرچم: هندلرِ رویدادهای ماوس باید بی‌درنگ
+        برگردد (وگرنه حرکت و کلیکِ ماوس لگ می‌گیرد)، و بارِ اولِ خواندنِ لغت‌نامه (۳۳۲ هزار واژه)
+        ده‌ها میلی‌ثانیه طول می‌کشد. پرچم در کلیدِ بعدی اعمال می‌شود.
+        """
+        self._invalidate_requested = True
 
     # ------------------------------------------------------------ متن
 
@@ -164,6 +200,9 @@ class Corrector:
     def _on_delimiter(self, code, grabbed):
         delimiter = DELIMITERS[code]
         keys, self._buffer = self._buffer, []
+        word_start_known = self._word_start_known
+        # این جداکننده خودش مرزِ کلمه است، پس آغازِ کلمهٔ بعدی معلوم است
+        self._word_start_known = True
 
         # آیا کلمهٔ قبلی واقعاً با Space جدا شده است یا مثلاً با Enter (اول خط)
         replace_prev_space = self._last_delimiter == ' '
@@ -178,10 +217,11 @@ class Corrector:
             return True
 
         word = self._text(keys, layout.persian)
-        corrected = self._maybe_correct(word, layout.persian)
+        corrected = self._maybe_correct(word, layout.persian, word_start_known)
         # توجه: با فعال‌بودن log، متن تایپ‌شده هم ذخیره می‌شود (برای عیب‌یابی).
-        applog.write("Delimiter key=%d layout=%s word='%s' -> '%s'"
-                     % (code, 'fa' if layout.persian else 'en', word, corrected or word))
+        applog.write("Delimiter key=%d layout=%s start=%s word='%s' -> '%s'"
+                     % (code, 'fa' if layout.persian else 'en',
+                        'known' if word_start_known else 'unknown', word, corrected or word))
         if corrected is None:
             return True
 
@@ -198,10 +238,10 @@ class Corrector:
         return True
 
     @staticmethod
-    def _maybe_correct(word, persian):
+    def _maybe_correct(word, persian, word_start_known):
         if not word.strip() or len(word) < 2:
             return None
-        corrected = detector.detect_wrong_layout(word, persian)
+        corrected = detector.detect_wrong_layout(word, persian, word_start_known)
         return None if corrected == word else corrected
 
     def _apply(self, original, corrected, delimiter, layout_was_persian, replace_space, delimiter_sent):

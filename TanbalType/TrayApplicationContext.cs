@@ -3,11 +3,15 @@ namespace TanbalType;
 internal sealed class TrayApplicationContext : ApplicationContext
 {
     private readonly NotifyIcon _trayIcon;
-    private readonly ToolStripMenuItem _enabledItem;
-    private readonly ToolStripMenuItem _logEnabledItem;
-    private readonly ToolStripMenuItem _startupItem;
     private readonly CorrectionService _service;
     private readonly KeyboardHook _hook;
+    private readonly MouseHook _mouseHook;
+
+    // منو تا بعدِ نمایانِ‌شدنِ آیکن ساخته نمی‌شود (ساختنش ~۱۱۰ms طول می‌کشد چون کل
+    // پشتهٔ ToolStrip را برای اولین بار بار می‌کند)، پس این سه تا اول null‌اند.
+    private ToolStripMenuItem? _enabledItem;
+    private ToolStripMenuItem? _logEnabledItem;
+    private ToolStripMenuItem? _startupItem;
 
     // مشخصات برنامه
     private readonly string AppName = "TanbalType";
@@ -38,31 +42,18 @@ internal sealed class TrayApplicationContext : ApplicationContext
         });
 
         _hook = new KeyboardHook(_service);
-
-        _enabledItem = new ToolStripMenuItem(EnabledItemText(true), null, ToggleEnabled) { Checked = true };
-        _logEnabledItem = new ToolStripMenuItem("ذخیره log", null, ToggleLogging) { Checked = AppLog.IsEnabled };
-        
-        // تنظیم دکمه استارت‌آپ بر اساس وجود فایل Shortcut در پوشه Startup
-        _startupItem = new ToolStripMenuItem("اجرا در استارت‌آپ", null, ToggleStartup) { Checked = IsStartupEnabled() };
-
-        var menu = new ContextMenuStrip();
-        menu.Items.Add(_enabledItem);
-        menu.Items.Add(_logEnabledItem);
-        menu.Items.Add("لغات استثنا...", null, (_, _) => ShowExceptionsWindow());
-        menu.Items.Add("لغات شخصی...", null, (_, _) => ShowUserWordsWindow());
-        menu.Items.Add(_startupItem);
-        menu.Items.Add("نمایش log", null, (_, _) => AppLog.OpenPrimaryLog());
-        menu.Items.Add("درباره برنامه", null, ShowAboutWindow);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("خروج", null, (_, _) => ExitThread());
+        _mouseHook = new MouseHook(_service);
 
         _trayIcon = new NotifyIcon
         {
-            Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
+            Icon = LoadAppIcon(),
             Text = $"{AppName} — فعال",
             Visible = true,
-            ContextMenuStrip = menu,
         };
+
+        // آیکن همین حالا نمایان می‌شود؛ منو در اولین بی‌کاریِ حلقهٔ پیام ساخته می‌شود
+        // که همان لحظه‌های بعدِ آن است و کاربر فرصت نکرده راست‌کلیک کند.
+        Application.Idle += BuildMenuOnFirstIdle;
 
         _hook.ToggleRequested += OnToggleHotkey;
 
@@ -70,6 +61,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             _hook.Install();
             AppLog.Write("Hook installed successfully.");
+
+            // پاییدنِ کلیک برای فهمیدنِ جابه‌جاییِ مکان‌نما؛ اگر نصب نشود برنامه
+            // مثل قبل کار می‌کند و خودش خطا را log می‌کند.
+            _mouseHook.Install();
             _trayIcon.ShowBalloonTip(
                 6000,
                 AppName,
@@ -90,6 +85,53 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
+    private void BuildMenuOnFirstIdle(object? sender, EventArgs e)
+    {
+        Application.Idle -= BuildMenuOnFirstIdle;
+
+        _enabledItem = new ToolStripMenuItem(EnabledItemText(_service.Enabled), null, ToggleEnabled)
+            { Checked = _service.Enabled };
+        _logEnabledItem = new ToolStripMenuItem("ذخیره log", null, ToggleLogging) { Checked = AppLog.IsEnabled };
+
+        // تنظیم دکمه استارت‌آپ بر اساس وجود فایل Shortcut در پوشه Startup
+        _startupItem = new ToolStripMenuItem("اجرا در استارت‌آپ", null, ToggleStartup) { Checked = IsStartupEnabled() };
+
+        var menu = new ContextMenuStrip();
+        menu.Items.Add(_enabledItem);
+        menu.Items.Add(_logEnabledItem);
+        menu.Items.Add("لغات استثنا...", null, (_, _) => ShowExceptionsWindow());
+        menu.Items.Add("لغات شخصی...", null, (_, _) => ShowUserWordsWindow());
+        menu.Items.Add(_startupItem);
+        menu.Items.Add("نمایش log", null, (_, _) => AppLog.OpenPrimaryLog());
+        menu.Items.Add("درباره برنامه", null, ShowAboutWindow);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("خروج", null, (_, _) => ExitThread());
+
+        _trayIcon.ContextMenuStrip = menu;
+        AppLog.Write("Tray menu built.");
+    }
+
+    /// <summary>
+    /// آیکن از منبعِ تعبیه‌شده خوانده می‌شود، نه با <c>Icon.ExtractAssociatedIcon</c>؛
+    /// آن یکی فایل exe را از دیسک می‌خواند و از پوستهٔ ویندوز عبور می‌کند و ~۱۲۰ms می‌گیرد.
+    /// </summary>
+    private static Icon LoadAppIcon()
+    {
+        try
+        {
+            using var stream = typeof(TrayApplicationContext).Assembly
+                .GetManifestResourceStream("TanbalType.app.ico");
+            if (stream is not null)
+                return new Icon(stream, SystemInformation.SmallIconSize);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write($"Embedded icon load failed: {ex.Message}");
+        }
+
+        return Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
+    }
+
     private void ToggleEnabled(object? sender, EventArgs e) =>
         SetEnabled(!_service.Enabled, notify: false);
 
@@ -100,8 +142,15 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private void SetEnabled(bool enabled, bool notify)
     {
         _service.Enabled = enabled;
-        _enabledItem.Checked = enabled;
-        _enabledItem.Text = EnabledItemText(enabled);
+
+        // ممکن است میان‌بر F10 پیش از ساخته‌شدنِ منو زده شود؛ آن‌وقت تیکِ منو هنگام
+        // ساختنش از روی وضعیتِ فعلیِ سرویس تنظیم می‌شود.
+        if (_enabledItem is not null)
+        {
+            _enabledItem.Checked = enabled;
+            _enabledItem.Text = EnabledItemText(enabled);
+        }
+
         _trayIcon.Text = enabled ? $"{AppName} — فعال" : $"{AppName} — غیرفعال";
         AppLog.Write(enabled ? "Enabled" : "Disabled");
 
@@ -120,10 +169,23 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private void ToggleLogging(object? sender, EventArgs e)
     {
         AppLog.IsEnabled = !AppLog.IsEnabled;
-        _logEnabledItem.Checked = AppLog.IsEnabled;
-        
+
+        if (_logEnabledItem is not null)
+            _logEnabledItem.Checked = AppLog.IsEnabled;
+
         if (AppLog.IsEnabled)
+        {
             AppLog.Write("Log saving enabled by user.");
+
+            // self-test دیگر هنگام راه‌اندازی اجرا نمی‌شود (با log خاموش خروجی‌اش دور
+            // ریخته می‌شد و فقط بالاآمدن را عقب می‌انداخت). الان همان‌جا اجرا می‌شود که
+            // به کار می‌آید: لحظه‌ای که کاربر log را برای عیب‌یابی روشن می‌کند.
+            Task.Run(static () =>
+            {
+                try { DetectorSelfTest.RunAndLog(); }
+                catch (Exception ex) { AppLog.Write($"SelfTest failed: {ex}"); }
+            });
+        }
     }
 
     // --- متدهای مربوط به استارت‌آپ (با استفاده از Shortcut) ---
@@ -136,7 +198,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void ToggleStartup(object? sender, EventArgs e)
     {
-        bool enable = !_startupItem.Checked;
+        bool enable = !IsStartupEnabled();
         try
         {
             if (enable)
@@ -155,7 +217,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 }
             }
 
-            _startupItem.Checked = enable;
+            if (_startupItem is not null)
+                _startupItem.Checked = enable;
         }
         catch (Exception ex)
         {
@@ -227,7 +290,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         if (disposing)
         {
+            Application.Idle -= BuildMenuOnFirstIdle;
             _hook.Dispose();
+            _mouseHook.Dispose();
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
             AppLog.Write("Application exit.");

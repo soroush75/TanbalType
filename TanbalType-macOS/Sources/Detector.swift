@@ -7,6 +7,12 @@ enum Detector {
     private static let strongEnglishThreshold = 0.45
     private static let strongPersianThreshold = 0.35
 
+    /// کمینهٔ طولِ توکن برای اصلاح، وقتی نمی‌دانیم آغازِ کلمه کجاست — یعنی کاربر در ادامهٔ متنی
+    /// که از قبل آن‌جا بوده تایپ کرده و فاصله‌ای در میان نیست. پایانِ کوتاهِ کلماتِ انگلیسی
+    /// («ing» در engineering، «nd»، «ard») و تکه‌های کوتاهِ فارسی («اث» در «احداث») تصویرِ
+    /// زبانِ دیگر را دارند و نباید اصلاح شوند.
+    private static let minUnanchoredLength = 4
+
     private static let domainSuffixes = DetectorData.domainSuffixes
     private static let siteNames = DetectorData.siteNames
     private static let englishWords = DetectorData.englishWords
@@ -14,6 +20,7 @@ enum Detector {
     private static let commonTwoLetterPersian = DetectorData.commonTwoLetterPersian
     private static let persianMarkers = DetectorData.persianMarkers
     private static let englishClusters = DetectorData.englishClusters
+    private static let englishWordEndings = DetectorData.englishWordEndings
     private static let persianBigrams: Set<String> = Set(DetectorData.persianBigramList)
 
     // لغت‌نامهٔ بزرگ فارسی از فایل منبع داخل bundle خوانده می‌شود
@@ -86,7 +93,16 @@ enum Detector {
         englishWords.contains(word.lowercased())
     }
 
-    static func detectWrongLayout(_ input: String, currentLayoutIsPersian: Bool) -> String? {
+    /// تصمیم دربارهٔ اصلاحِ یک توکن.
+    ///
+    /// `wordStartKnown`: آیا مطمئنیم همین‌جا آغازِ کلمه است؟ یعنی می‌دانیم پیش از این توکن
+    /// فاصله/اینتر بوده، نه یک حرفِ دیگر. وقتی کاربر برنامه را عوض کرده، با ماوس جای مکان‌نما
+    /// را برده، کلیدِ جهتی زده یا برنامه تازه بالا آمده، آن‌چه پیش از توکن است نامعلوم می‌مانَد؛
+    /// آن‌وقت توکن می‌تواند تکهٔ پایانیِ کلمه‌ای باشد که از قبل نوشته شده («engineer» + «ing»)
+    /// و اصلاحش متنِ درست را خراب می‌کند. در آن حالت فقط شواهدِ قطعی پذیرفته می‌شود و
+    /// حدس‌های نمره‌ای کنار می‌رود.
+    static func detectWrongLayout(_ input: String, currentLayoutIsPersian: Bool,
+                                  wordStartKnown: Bool = true) -> String? {
         let word = input.trimmingCharacters(in: .whitespacesAndNewlines)
         if word.count < 2 {
             return nil
@@ -110,9 +126,9 @@ enum Detector {
         }
 
         if currentLayoutIsPersian {
-            return detectEnglishIntendedOnPersianLayout(word)
+            return detectEnglishIntendedOnPersianLayout(word, wordStartKnown: wordStartKnown)
         }
-        return detectPersianIntendedOnEnglishLayout(word)
+        return detectPersianIntendedOnEnglishLayout(word, wordStartKnown: wordStartKnown)
     }
 
     /// معادل char.IsDigit در .NET: هر رقم دهدهی یونیکد (از جمله ارقام فارسی و عربی).
@@ -143,7 +159,8 @@ enum Detector {
         return .replace(canonical)
     }
 
-    private static func detectEnglishIntendedOnPersianLayout(_ word: String) -> String? {
+    private static func detectEnglishIntendedOnPersianLayout(_ word: String,
+                                                             wordStartKnown: Bool) -> String? {
         // کلمهٔ لغت‌نامه‌ای یا کلمه‌ای با پسوند چسبان — فارسیِ عمدی است
         if isKnownPersianWord(word) {
             return nil
@@ -156,12 +173,23 @@ enum Detector {
         }
 
         // اگر روی حالت فارسی آدرس یا نام سایت تایپ شده باشد، به انگلیسی برمی‌گردد
-        if shouldConvertToWebAddress(mappedEn) {
+        if shouldConvertToWebAddress(word, mappedEn) {
             return mappedEn
+        }
+
+        // تکهٔ ناتمام: «اث» (در «احداث») تصویرِ «he» را دارد و «اشقی» (در «عاشقی») تصویرِ
+        // «hard» را؛ تکه‌های کوتاه در این حالت دست‌نخورده می‌مانند.
+        if !wordStartKnown && word.count < minUnanchoredLength {
+            return nil
         }
 
         if isEnglishWord(mappedEn) {
             return mappedEn
+        }
+
+        // از این‌جا به بعد تصمیم بر پایهٔ نمره است نه فهرست؛ برای تکهٔ ناتمام کافی نیست.
+        if !wordStartKnown {
+            return nil
         }
 
         let length = Double(word.count)
@@ -189,7 +217,8 @@ enum Detector {
         return nil
     }
 
-    private static func detectPersianIntendedOnEnglishLayout(_ word: String) -> String? {
+    private static func detectPersianIntendedOnEnglishLayout(_ word: String,
+                                                             wordStartKnown: Bool) -> String? {
         // کاربر در حال وارد کردن آدرس یا نام سایت است — نباید به فارسی تبدیل شود
         if isProbablyWebInput(word) {
             return nil
@@ -209,6 +238,11 @@ enum Detector {
             return nil
         }
 
+        // تکهٔ ناتمام: «ing» (در «engineering») تصویرِ «هدل» را دارد و «nd» تصویرِ «دی».
+        if !wordStartKnown && !isSafeUnanchored(word) {
+            return nil
+        }
+
         var match = lookupPersian(mappedFa)
         let englishScore = scoreIntentionalEnglish(word)
 
@@ -222,11 +256,21 @@ enum Detector {
             match = .none
         }
 
+        // تطبیقِ ضعیف شاهدِ قطعی نیست، پس برای تکهٔ ناتمام هم کافی نیست.
+        if match == .weak && !wordStartKnown {
+            match = .none
+        }
+
         if match != .none {
             return mappedFa
         }
 
         if englishScore >= strongEnglishThreshold {
+            return nil
+        }
+
+        // از این‌جا به بعد تصمیم بر پایهٔ نمره است نه لغت‌نامه؛ برای تکهٔ ناتمام کافی نیست.
+        if !wordStartKnown {
             return nil
         }
 
@@ -236,6 +280,34 @@ enum Detector {
         }
 
         return nil
+    }
+
+    /// آیا این توکن، بی‌آنکه بدانیم آغازِ کلمه است، به‌اندازهٔ کافی ایمن است که اصلاح شود؟
+    ///
+    /// پایانِ کلماتِ انگلیسی («ing»، «ther») و تکه‌های کوتاه نه؛ توکنِ بلند یا توکنی که شکلِ
+    /// کلمهٔ انگلیسی ندارد («o,f» → «خوب») بله.
+    private static func isSafeUnanchored(_ word: String) -> Bool {
+        if englishWordEndings.contains(word.lowercased()) {
+            return false
+        }
+        return word.count >= minUnanchoredLength || hasNonEnglishWordShape(word)
+    }
+
+    /// آیا این توکنِ ASCII نشانه‌ای دارد که داخلِ یک کلمهٔ انگلیسی دیده نمی‌شود؟
+    ///
+    /// حروفِ «و ک گ ج چ» روی کلیدهای «, ; ' [ ]» می‌نشینند، پس «o,f» («خوب») هیچ‌گاه پایانِ
+    /// یک کلمهٔ انگلیسی نیست و بی‌خطر اصلاح می‌شود. حرفِ بزرگ در میانهٔ توکن هم همین معنی را
+    /// دارد (Shift برای «آ»، «ژ» و ... زده شده است).
+    private static func hasNonEnglishWordShape(_ word: String) -> Bool {
+        for (index, ch) in word.enumerated() {
+            if !(ch.isASCII && ch.isLetter) {
+                return true
+            }
+            if index > 0 && ch.isUppercase {
+                return true
+            }
+        }
+        return false
     }
 
     /// آیا کاربر روی حالت انگلیسی مشغول تایپ آدرس/ایمیل/نام سایت است؟
@@ -256,7 +328,27 @@ enum Detector {
     }
 
     /// آیا متن نگاشت‌شده از حالت فارسی، یک آدرس/نام سایت واقعی است؟ (سخت‌گیری زیاد)
-    private static func shouldConvertToWebAddress(_ mappedEn: String) -> Bool {
+    /// دو واژهٔ فارسیِ چسبیده به نقطه («سلام.شب») — شکلِ دامنه دارد ولی آدرس نیست.
+    ///
+    /// بخشِ دوحرفی فقط اگر از واژه‌های پرکاربرد باشد؛ ورودی‌های دوحرفیِ لغت‌نامه بیشترشان
+    /// نویزند و با پسوندهای دوحرفیِ دامنه تداخل می‌کنند («of.tv» → «خب.فر»).
+    private static func isDottedPersianText(_ word: String) -> Bool {
+        let parts = word.split(separator: ".", omittingEmptySubsequences: true).map(String.init)
+        if parts.count < 2 {
+            return false
+        }
+        for part in parts {
+            let known = part.count == 2
+                ? commonTwoLetterPersian.contains(part)
+                : isKnownPersianWord(part)
+            if !known {
+                return false
+            }
+        }
+        return true
+    }
+
+    private static func shouldConvertToWebAddress(_ word: String, _ mappedEn: String) -> Bool {
         if isKnownSiteName(mappedEn) {
             return true
         }
@@ -266,7 +358,10 @@ enum Detector {
         if mappedEn.lowercased().hasPrefix("www.") && mappedEn.count >= 8 {
             return true
         }
+        // این‌جا متنِ کاربر عوض می‌شود، پس صرفِ «حرف.حرف» کافی نیست: دو واژهٔ فارسیِ
+        // چسبیده به نقطه هم همان شکل را دارد («سلام.شب» → sghl.af)
         return hasDomainSuffix(mappedEn) && Mapper.countAsciiLetters(mappedEn) >= 4
+            && !isDottedPersianText(word)
     }
 
     private static func hasDomainSuffix(_ text: String) -> Bool {

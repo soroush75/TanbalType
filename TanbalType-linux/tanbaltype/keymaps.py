@@ -28,12 +28,28 @@ KEY_LEFTMETA = 125
 KEY_RIGHTMETA = 126
 KEY_A = 30
 KEY_Z = 44
+KEY_HOME = 102
+KEY_UP = 103
+KEY_PAGEUP = 104
+KEY_LEFT = 105
+KEY_RIGHT = 106
+KEY_END = 107
+KEY_DOWN = 108
+KEY_PAGEDOWN = 109
+KEY_INSERT = 110
+KEY_DELETE = 111
 
 SHIFT_KEYS = frozenset((KEY_LEFTSHIFT, KEY_RIGHTSHIFT))
 # کلیدهایی که با نگه‌داشتنشان کلید بعدی «تایپ» حساب نمی‌شود (میان‌بر است)
 COMMAND_MODIFIERS = frozenset((KEY_LEFTCTRL, KEY_RIGHTCTRL, KEY_LEFTALT, KEY_RIGHTALT,
                                KEY_LEFTMETA, KEY_RIGHTMETA))
 MODIFIERS = SHIFT_KEYS | COMMAND_MODIFIERS | {KEY_CAPSLOCK}
+
+# کلیدهایی که مکان‌نما را جابه‌جا می‌کنند یا متنِ اطرافش را عوض می‌کنند و همگامیِ بافر را از بین
+# می‌برند. (Corrector هر کلیدِ ناشناخته‌ای را همین‌طور رفتار می‌کند، پس این فهرست محدودکننده نیست؛
+# برای خوانایی و آزمون است.)
+CARET_KEYS = frozenset((KEY_ESC, KEY_HOME, KEY_UP, KEY_PAGEUP, KEY_LEFT, KEY_RIGHT, KEY_END,
+                        KEY_DOWN, KEY_PAGEDOWN, KEY_INSERT, KEY_DELETE))
 
 # (کد evdev، حرف US بدون Shift، حرف US با Shift، نام کلید در xkb)
 US_KEYS = [

@@ -14,6 +14,18 @@ SRC = os.path.dirname(HERE)  # پوشهٔ TanbalType-linux (یا ریشهٔ فا
 sys.path.insert(0, SRC)
 
 
+def junk(name):
+    """فایل‌های زائدی که نباید داخل بسته بروند.
+
+    «._x» فایلِ AppleDouble است: macOS کنارِ هر فایل یکی می‌سازد تا resource fork
+    را روی فایل‌سیستمِ غیرمکی نگه دارد. نامش به «.py» یا «.svg» ختم می‌شود، پس
+    بی‌این بررسی ۲۰ فایلِ ۴ کیلوبایتیِ دودویی کنارِ ماژول‌های واقعی داخلِ بسته
+    می‌رفتند، و ساختِ rpm هم با «Installed (but unpackaged) file(s)» می‌شکست چون
+    %files الگوی «tanbaltype*.svg» را دارد نه «._tanbaltype*.svg».
+    """
+    return name.startswith('._') or name in ('.DS_Store', 'Thumbs.db')
+
+
 def find_words():
     for path in (os.path.join(SRC, 'PersianWords.txt'),
                  os.path.join(os.path.dirname(SRC), 'TanbalType', 'PersianWords.txt')):
@@ -75,6 +87,8 @@ def stage(root, prefix):
 
     pkg = os.path.join(SRC, 'tanbaltype')
     for name in sorted(os.listdir(pkg)):
+        if junk(name):
+            continue
         if name.endswith('.py') and name != '_version.py' or name == 'detector_data.json':
             s.copy(os.path.join(pkg, name), '%s/tanbaltype/%s' % (libdir, name))
     s.write('%s/tanbaltype/_version.py' % libdir, "VERSION = '%s'\n" % version)
@@ -88,6 +102,8 @@ def stage(root, prefix):
     s.copy(os.path.join(SRC, 'packaging', 'tanbaltype-autostart.desktop'), '/etc/xdg/autostart/tanbaltype.desktop')
     icons = os.path.join(SRC, 'packaging', 'icons')
     for name in sorted(os.listdir(icons)):
+        if junk(name):
+            continue
         s.copy(os.path.join(icons, name), prefix + '/share/icons/hicolor/scalable/apps/' + name)
 
     # udev روی /usr/local/lib/udev نگاه نمی‌کند؛ نصب دستی در /etc انجام می‌شود

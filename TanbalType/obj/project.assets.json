@@ -1,7 +1,8 @@
 {
   "version": 3,
   "targets": {
-    "net8.0-windows7.0": {}
+    "net8.0-windows7.0": {},
+    "net8.0-windows7.0/win-x64": {}
   },
   "libraries": {},
   "projectFileDependencyGroups": {
@@ -11,7 +12,7 @@
     "C:\\Users\\sorou\\.nuget\\packages\\": {}
   },
   "project": {
-    "version": "1.4.0",
+    "version": "1.5.0",
     "restore": {
       "projectUniqueName": "C:\\Users\\sorou\\Downloads\\Telegram Desktop\\TanbalType\\TanbalType\\TanbalType\\TanbalType.csproj",
       "projectName": "TanbalType",
@@ -59,6 +60,24 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
+            "version": "[8.0.28, 8.0.28]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Crossgen2.win-x64",
+            "version": "[8.0.28, 8.0.28]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Runtime.win-x64",
+            "version": "[8.0.28, 8.0.28]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+            "version": "[8.0.28, 8.0.28]"
+          }
+        ],
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"
@@ -68,6 +87,11 @@
           }
         },
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.422/PortableRuntimeIdentifierGraph.json"
+      }
+    },
+    "runtimes": {
+      "win-x64": {
+        "#import": []
       }
     }
   }

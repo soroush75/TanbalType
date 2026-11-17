@@ -6,13 +6,52 @@ public static class Detector
     private const double StrongEnglishThreshold = 0.45;
     private const double StrongPersianThreshold = 0.35;
 
-    // پسوندهای دامنه برای شناسایی آدرس سایت
-    private static readonly string[] DomainSuffixes =
-    [
-        ".ir", ".com", ".org", ".net", ".io", ".co", ".edu", ".gov", ".info",
-        ".biz", ".me", ".dev", ".app", ".ai", ".tv", ".shop", ".site",
-        ".online", ".store", ".xyz", ".pro", ".cc", ".link"
-    ];
+    /// <summary>
+    /// کمینهٔ طولِ توکن برای اصلاح، وقتی نمی‌دانیم آغازِ کلمه کجاست — یعنی کاربر در
+    /// ادامهٔ متنی که از قبل آن‌جا بوده تایپ کرده و فاصله‌ای در میان نیست. پایانِ
+    /// کوتاهِ کلماتِ انگلیسی («ing» در engineering، «nd»، «ard») و تکه‌های کوتاهِ
+    /// فارسی («اث» در «احداث») تصویرِ زبانِ دیگر را دارند و نباید اصلاح شوند.
+    /// </summary>
+    private const int MinUnanchoredLength = 4;
+
+    /// <summary>
+    /// پسوندهای دامنه، برای جهتِ سخت‌گیرانهٔ فارسی←انگلیسی.
+    ///
+    /// پیش‌تر فقط ۲۳ پسوند در این فهرست بود و تشخیصِ آدرس تنها بر همین فهرست تکیه داشت؛
+    /// نتیجه این بود که هر دامنه‌ای با پسوندِ بیرونِ فهرست اصلاح می‌شد و خراب می‌شد
+    /// (<c>military.world</c> → «ئهمهفشقغ.صخقمی»، <c>filimo.fr</c> → «بهمهئخ.بق»).
+    /// الان در جهتِ انگلیسی←فارسی اصلاً فهرستی در کار نیست و شکلِ آدرس ملاک است
+    /// (<see cref="HasHostShape"/>)، پس هر پسوندی — حتی پسوندهای تازه — محافظت می‌شود.
+    /// این فهرست فقط جایی به کار می‌آید که می‌خواهیم متنِ کاربر را عوضاً *تغییر* دهیم،
+    /// یعنی وقتی آدرس اشتباهاً روی حالت فارسی تایپ شده و باید به انگلیسی برگردد.
+    /// </summary>
+    private static readonly HashSet<string> KnownTlds = BuildTldSet(
+        // دامنه‌های کشوری (ccTLD) — کاملِ فهرست IANA
+        "ac ad ae af ag ai al am ao aq ar as at au aw ax az ba bb bd be bf bg bh bi bj bm bn bo br bs bt " +
+        "bv bw by bz ca cc cd cf cg ch ci ck cl cm cn co cr cu cv cw cx cy cz de dj dk dm do dz ec ee eg " +
+        "er es et eu fi fj fk fm fo fr ga gb gd ge gf gg gh gi gl gm gn gp gq gr gs gt gu gw gy hk hm hn " +
+        "hr ht hu id ie il im in io iq ir is it je jm jo jp ke kg kh ki km kn kp kr kw ky kz la lb lc li " +
+        "lk lr ls lt lu lv ly ma mc md me mg mh mk ml mm mn mo mp mq mr ms mt mu mv mw mx my mz na nc ne " +
+        "nf ng ni nl no np nr nu nz om pa pe pf pg ph pk pl pm pn pr ps pt pw py qa re ro rs ru rw sa sb " +
+        "sc sd se sg sh si sj sk sl sm sn so sr ss st su sv sx sy sz tc td tf tg th tj tk tl tm tn to tr " +
+        "tt tv tw tz ua ug uk us uy uz va vc ve vg vi vn vu wf ws ye yt za zm zw " +
+        // دامنه‌های عمومی و دامنه‌های سطح‌دومِ پرکاربرد
+        "ac.ir ac.uk academy aero agency app apps arpa art asia bank bar bio biz blog business cafe " +
+        "capital care cat center chat city click clinic cloud club co.in co.jp co.kr co.nz co.th " +
+        "co.uk co.za college com com.ar com.au com.bd com.br com.cn com.eg com.hk com.ir com.mx com.my " +
+        "com.ph com.pk com.sa com.sg com.tr com.tw com.vn community company consulting coop cyber data " +
+        "deal design dev digital dog eco edu edu.au education email enterprises estate events expert farm " +
+        "film finance fit flights forum fun fund gallery game games global gov gov.au gov.ir gov.uk green " +
+        "group guru health home host hotel house id.ir industries info institute int international " +
+        "jobs land law legal life link live market me.uk media mil mobi money movie museum music name " +
+        "ne.jp net net.au net.cn net.ir net.uk network news ninja one online or.jp org org.au org.cn " +
+        "org.ir org.uk organic page pet photo pizza place plus post press pro radio restaurant rocks sale " +
+        "sch.ir school shop shopping show site social software solutions space store studio systems team " +
+        "tech tel ticket today tools top tours town travel tube university video vip web website wiki " +
+        "world xyz zone");
+
+    private static HashSet<string> BuildTldSet(string packed) =>
+        new(packed.Split(' ', StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase);
 
     // نام سایت‌ها و اپلیکیشن‌هایی که با حروف انگلیسی تایپ می‌شوند ولی کلمهٔ انگلیسی نیستند
     // (نام‌های فارسی مثل digikala در انگلیسی معنایی ندارند و نباید «اصلاح» شوند)
@@ -173,7 +212,37 @@ public static class Detector
         "toll", "fold", "tall", "valid", "solid", "civil", "facility", "wild", "milk", "mild", "silk",
         "sand", "grid", "fig", "lid", "gel", "lan", "nokia", "andy", "jill", "lucia", "possibility",
         "probability", "stability", "flexibility", "mobility", "roughly", "thoroughly", "rand", "ghz", "msg", "dns", "cia",
-        "hung"
+        "hung",
+
+        // --- تداخلِ «انگلیسیِ پرکاربرد» با «فارسیِ کم‌کاربرد»: انگلیسی برنده می‌شود ---
+        // سویپ روی فهرست ۱۰٬۰۰۰ واژهٔ انگلیسی به‌ترتیبِ بسامد، فقط موارد زیر رتبهٔ ~۳۵۰۰
+        // را نگه داشته‌ایم و تنها آن‌جا که تصویرِ فارسی واژهٔ پرکاربردی نیست:
+        //   oct→«خزف» china→«زاهدش» sun→«سعد» land→«مشدی» india→«هدیهش» ad→«شی»
+        //   aid→«شهی» tag→«فشل» vhs→«راس» ski→«سنه» src→«سقز» hiv→«اهر» kid→«نهی»
+        //   vat→«رشف» ali→«شمه»
+        // در مقابل، آن‌جا که تصویرِ فارسی واژهٔ پرکاربردی است عمداً دست نزده‌ایم تا اصلاحِ
+        // فارسی از بین نرود: fun→«بعد» fund→«بعدی» van→«رشد» il→«هم» fi→«به» cold→«زخمی»
+        // iv→«هر» nd→«دی» pdt→«حیف» oak→«خشن» si→«سه» leg→«مثل» col→«زخم» til→«فهم»
+        //
+        // این فهرست جهتِ انگلیسی→انگلیسی را می‌گیرد (کاربر انگلیسی تایپ می‌کند و نباید
+        // خراب شود). برای آن‌که در جهتِ فارسی→انگلیسی هم اصلاح شود، واژهٔ فارسی باید از
+        // لغت‌نامه برود؛ آن کار در ENGLISH_WINS داخل add_big_to_detector.py انجام شده و
+        // فقط برای واژه‌های کم‌کاربرد (خزف، شهی، فشل، مشدی، سنه، رشف، شمه).
+        "oct", "china", "sun", "land", "india", "ad", "aid", "tag", "vhs", "ski", "src", "hiv",
+        "kid", "vat", "ali",
+        // آلمانی است نه انگلیسی، ولی این فهرست در عمل «توکن‌های لاتینی که دست‌نخورده
+        // بمانند» است (مثل فینگلیش و مخفف‌ها)، و «عدی» واژهٔ پرکاربردی نیست
+        "und",
+
+        // --- سویپ روی کل فرهنگ املاییِ انگلیسی (hunspell en-US) ---
+        // ۱۷ موردِ زیر پیش از این روی حالتِ انگلیسی اشتباهاً فارسی می‌شدند
+        // (shy→«ساغ»، avid→«شرهی»، rival→«قهرشم»، anvil→«شدرهم»، ...). بقیه الان هم
+        // سالم‌اند ولی این‌جا ثبت شده‌اند تا با تغییرِ بعدیِ لغت‌نامه دوباره نشکنند.
+        // («aid» از قبل بالاتر در همین فهرست است.)
+        // تصویرِ فارسیِ هیچ‌یک واژهٔ فارسیِ واقعی نیست، پس اصلاحی از دست نمی‌رود.
+        "shy", "gut", "hut", "jug", "jot", "lag", "lax", "fad", "foe", "cog", "hid",
+        "avid", "fond", "hail", "nail", "raid", "rail", "laid", "slid", "fail",
+        "rival", "soda", "skid", "anvil"
     };
 
     // کلمات محاوره‌ای فارسی که در فایل لغت‌نامه نیستند ولی در تایپ روزمره زیاد استفاده می‌شوند
@@ -272,6 +341,12 @@ public static class Detector
     private static bool IsKnownPersianWord(string word) => LookupPersian(word) != DictMatch.None;
 
     /// <summary>
+    /// لغت‌نامه را از پیش می‌خواند. از <c>Program</c> روی نخِ پس‌زمینه صدا زده می‌شود تا
+    /// هزینهٔ خواندنش نه بالاآمدنِ برنامه را عقب بیندازد و نه اولین کلمهٔ کاربر را.
+    /// </summary>
+    public static void Warmup() => _ = PersianWords.Count;
+
+    /// <summary>
     /// واژه‌های دوحرفیِ پرکاربرد فارسی.
     ///
     /// لغت‌نامه بیش از ۷۰۰ ورودی دوحرفی دارد که اکثرشان ترکیب‌های نادر یا بی‌معنی‌اند
@@ -317,13 +392,41 @@ public static class Detector
 
     private static int BigramKey(char first, char second) => (first << 16) | second;
 
+    /// <summary>
+    /// پایان‌های پرکاربردِ کلماتِ انگلیسی.
+    ///
+    /// وقتی آغازِ کلمه معلوم نیست، آنچه کاربر زده می‌تواند همین باشد: تکه‌ای که به
+    /// کلمه‌ای که از قبل نوشته شده چسبیده است. چنین تکه‌ای حتی اگر تصویرش در
+    /// لغت‌نامهٔ فارسی پیدا شود هم اصلاح نمی‌شود — «ther» (در «father») تصویرِ
+    /// «فاثق» را دارد که در لغت‌نامه هست ولی کسی آن را تایپ نمی‌کند.
+    /// هیچ‌یک از این‌ها تصویرِ یک واژهٔ فارسیِ واقعی نیست، پس چیزی از دست نمی‌رود.
+    /// </summary>
+    private static readonly HashSet<string> EnglishWordEndings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ing", "ings", "ed", "er", "ers", "est", "ly", "ally", "ness", "ment", "ments",
+        "tion", "tions", "sion", "sions", "ation", "able", "ible", "ful", "less", "ous",
+        "ive", "ity", "ties", "ard", "ards", "ward", "wards", "ther", "ield", "ought",
+        "nal", "tal", "ral", "ial", "ical", "ism", "ist", "ence", "ship", "hood",
+        "dard", "tand", "ound", "ount", "ance", "ting", "ding", "ning", "king", "ling",
+    };
+
     private static readonly string[] EnglishClusters =
     [
         "str", "spr", "scr", "sch", "ck", "ght", "tch", "tion", "ing", "ment", "ness",
         "able", "ible", "ous", "ful", "less", "est", "ist", "ph", "wh", "qu",
     ];
 
-    public static string? DetectWrongLayout(string word, bool currentLayoutIsPersian)
+    /// <summary>
+    /// تصمیم دربارهٔ اصلاحِ یک توکن.
+    ///
+    /// <paramref name="wordStartKnown"/>: آیا مطمئنیم همین‌جا آغازِ کلمه است؟ یعنی
+    /// می‌دانیم پیش از این توکن فاصله/اینتر بوده، نه یک حرفِ دیگر. وقتی کاربر پنجره
+    /// عوض کرده، با ماوس جای مکان‌نما را برده یا برنامه تازه بالا آمده، آن‌چه پیش از
+    /// توکن است نامعلوم می‌مانَد؛ آن‌وقت توکن می‌تواند تکهٔ پایانیِ کلمه‌ای باشد که
+    /// از قبل نوشته شده («engineer» + «ing») و اصلاحش متنِ درست را خراب می‌کند.
+    /// در آن حالت فقط شواهدِ قطعی پذیرفته می‌شود و حدس‌های نمره‌ای کنار می‌رود.
+    /// </summary>
+    public static string? DetectWrongLayout(string word, bool currentLayoutIsPersian, bool wordStartKnown = true)
     {
         word = word.Trim();
         if (word.Length < 2)
@@ -343,9 +446,9 @@ public static class Detector
             return null;
 
         if (currentLayoutIsPersian)
-            return DetectEnglishIntendedOnPersianLayout(word);
+            return DetectEnglishIntendedOnPersianLayout(word, wordStartKnown);
 
-        return DetectPersianIntendedOnEnglishLayout(word);
+        return DetectPersianIntendedOnEnglishLayout(word, wordStartKnown);
     }
 
     /// <summary>
@@ -372,7 +475,7 @@ public static class Detector
         return true;
     }
 
-    private static string? DetectEnglishIntendedOnPersianLayout(string word)
+    private static string? DetectEnglishIntendedOnPersianLayout(string word, bool wordStartKnown)
     {
         // کلمهٔ لغت‌نامه‌ای یا کلمه‌ای با پسوند چسبان («تشخیصش») — فارسیِ عمدی است
         if (IsKnownPersianWord(word))
@@ -384,11 +487,20 @@ public static class Detector
             return null;
 
         // اگر روی حالت فارسی آدرس یا نام سایت تایپ شده باشد، به انگلیسی برمی‌گردد
-        if (ShouldConvertToWebAddress(mappedEn))
+        if (ShouldConvertToWebAddress(word, mappedEn))
             return mappedEn;
+
+        // تکهٔ ناتمام: «اث» (در «احداث») تصویرِ «he» را دارد و «اشقی» (در «عاشقی»)
+        // تصویرِ «hard» را؛ تکه‌های کوتاه در این حالت دست‌نخورده می‌مانند.
+        if (!wordStartKnown && word.Length < MinUnanchoredLength)
+            return null;
 
         if (EnglishWords.Contains(mappedEn))
             return mappedEn;
+
+        // از این‌جا به بعد تصمیم بر پایهٔ نمره است نه فهرست؛ برای تکهٔ ناتمام کافی نیست.
+        if (!wordStartKnown)
+            return null;
 
         if (Mapper.CountPersian(word) >= word.Length * 0.75)
         {
@@ -413,7 +525,7 @@ public static class Detector
         return null;
     }
 
-    private static string? DetectPersianIntendedOnEnglishLayout(string word)
+    private static string? DetectPersianIntendedOnEnglishLayout(string word, bool wordStartKnown)
     {
         // کاربر در حال وارد کردن آدرس یا نام سایت است — نباید به فارسی تبدیل شود
         if (IsProbablyWebInput(word))
@@ -430,6 +542,10 @@ public static class Detector
         if (UserExceptions.IsException(mappedFa))
             return null;
 
+        // تکهٔ ناتمام: «ing» (در «engineering») تصویرِ «هدل» را دارد و «nd» تصویرِ «دی».
+        if (!wordStartKnown && !IsSafeUnanchored(word))
+            return null;
+
         var match = LookupPersian(mappedFa);
         var englishScore = ScoreIntentionalEnglish(word);
 
@@ -444,10 +560,18 @@ public static class Detector
         if (match == DictMatch.Weak && englishScore >= StrongEnglishThreshold)
             match = DictMatch.None;
 
+        // تطبیقِ ضعیف شاهدِ قطعی نیست، پس برای تکهٔ ناتمام هم کافی نیست.
+        if (match == DictMatch.Weak && !wordStartKnown)
+            match = DictMatch.None;
+
         if (match != DictMatch.None)
             return mappedFa;
 
         if (englishScore >= StrongEnglishThreshold)
+            return null;
+
+        // از این‌جا به بعد تصمیم بر پایهٔ نمره است نه لغت‌نامه؛ برای تکهٔ ناتمام کافی نیست.
+        if (!wordStartKnown)
             return null;
 
         var persianScore = ScorePersianOnEnglishKeys(word);
@@ -466,60 +590,191 @@ public static class Detector
         if (word.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
             return true;
 
-        if (word.Contains('@') && LooksLikeEmailOrDomain(word))
-            return true;
-
-        if (HasDomainSuffix(word))
+        // هر چیزی که شکلِ میزبان دارد: با یا بدون زیردامنه، مسیر، پورت، query یا کاربرِ ایمیل.
+        // هیچ فهرستی از پسوندها دخیل نیست، پس دامنه‌های تازه هم خودبه‌خود محافظت می‌شوند.
+        if (HasHostShape(word))
             return true;
 
         return IsKnownSiteName(word);
     }
 
+    /// <summary>
+    /// بخشِ میزبانِ یک آدرس را جدا می‌کند: scheme، نامِ کاربرِ ایمیل، مسیر، پورت و query حذف می‌شوند.
+    /// (<c>https://user@api.site.io:8080/a?b=1</c> → <c>api.site.io</c>)
+    /// </summary>
+    private static string HostPart(string text)
+    {
+        var span = text.AsSpan();
+
+        var scheme = span.IndexOf("://", StringComparison.Ordinal);
+        if (scheme >= 0)
+            span = span[(scheme + 3)..];
+
+        var at = span.LastIndexOf('@');
+        if (at >= 0)
+            span = span[(at + 1)..];
+
+        var cut = span.IndexOfAny('/', '?', '#');
+        if (cut >= 0)
+            span = span[..cut];
+
+        var port = span.IndexOf(':');
+        if (port >= 0)
+            span = span[..port];
+
+        return span.Trim('.').ToString();
+    }
+
+    /// <summary>
+    /// آیا توکن شکلِ یک نامِ میزبان را دارد؟ یعنی دو برچسب یا بیشتر، جداشده با نقطه،
+    /// که آخری‌شان ۲ تا ۲۴ حرفِ لاتین است و بقیه فقط حرف/رقم/خط تیره دارند.
+    /// این ملاکِ ساختاری است نه فهرستی، پس به هیچ پسوندِ خاصی وابسته نیست.
+    /// </summary>
+    private static bool HasHostShape(string text)
+    {
+        var host = HostPart(text);
+        if (host.Length < 4 || !host.Contains('.'))
+            return false;
+
+        var labels = host.Split('.');
+        if (labels.Length < 2)
+            return false;
+
+        foreach (var label in labels)
+        {
+            if (label.Length == 0)
+                return false;
+
+            foreach (var ch in label)
+            {
+                if (!char.IsAsciiLetterOrDigit(ch) && ch != '-')
+                    return false;
+            }
+        }
+
+        var tld = labels[^1];
+        if (tld.Length is < 2 or > 24 || !tld.All(char.IsAsciiLetter))
+            return false;
+
+        // پیش از پسوند باید لااقل یک برچسبِ حرفی باشد، تا «1.2» یا «۱۲.۳۴» آدرس حساب نشود
+        for (var i = 0; i < labels.Length - 1; i++)
+        {
+            if (labels[i].Any(char.IsAsciiLetter))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>پسوندِ شناخته‌شده در انتهای نامِ میزبان (مثل <c>.io</c>، <c>.com</c>، <c>.ac.ir</c>).</summary>
+    private static bool HasKnownTld(string text)
+    {
+        var host = HostPart(text);
+        var lastDot = host.LastIndexOf('.');
+        if (lastDot < 0)
+            return false;
+
+        // ابتدا پسوندِ دوبخشی (co.uk، ac.ir) و بعد تک‌بخشی
+        var prevDot = host.LastIndexOf('.', lastDot - 1 < 0 ? 0 : lastDot - 1);
+        if (prevDot >= 0 && prevDot < lastDot && KnownTlds.Contains(host[(prevDot + 1)..]))
+            return true;
+
+        return KnownTlds.Contains(host[(lastDot + 1)..]);
+    }
+
     /// <summary>آیا متن نگاشت‌شده از حالت فارسی، یک آدرس/نام سایت واقعی است؟ (سخت‌گیری زیاد؛ چون باعث اصلاح خودکار می‌شود)</summary>
-    private static bool ShouldConvertToWebAddress(string mappedEn)
+    private static bool ShouldConvertToWebAddress(string word, string mappedEn)
     {
         if (IsKnownSiteName(mappedEn))
             return true;
 
-        if (!LooksLikeEmailOrDomain(mappedEn))
-            return false;
+        if (mappedEn.Contains("://", StringComparison.Ordinal))
+            return true;
 
         if (mappedEn.StartsWith("www.", StringComparison.OrdinalIgnoreCase) && mappedEn.Length >= 8)
             return true;
 
-        return HasDomainSuffix(mappedEn) && Mapper.CountAsciiLetters(mappedEn) >= 4;
+        // این‌جا متنِ کاربر عوض می‌شود، پس هم شکلِ آدرس لازم است و هم پسوندِ شناخته‌شده؛
+        // صرفِ «حرف.حرف» کافی نیست چون دو واژهٔ فارسیِ چسبیده به نقطه هم همان شکل را دارد
+        // («سلام.شب» → sghl.af).
+        return HasHostShape(mappedEn)
+               && HasKnownTld(mappedEn)
+               && Mapper.CountAsciiLetters(mappedEn) >= 4
+               && !IsDottedPersianText(word);
     }
 
-    private static bool HasDomainSuffix(string text)
+    /// <summary>
+    /// آیا توکن در اصل چند واژهٔ فارسی است که با نقطه به هم چسبیده‌اند؟ («سلام.شب»، «دست.راست»)
+    ///
+    /// از نمره‌دهیِ عمومی دقیق‌تر است: <see cref="HasPersianMarker"/> زیررشته‌ای کار می‌کند و
+    /// Markerهای سه‌حرفی داخلِ آدرسِ اشتباه‌تایپ‌شده هم پیدا می‌شوند
+    /// («همه» داخلِ «ئهمهفشقغ» یعنی military)، پس آدرس را اشتباهاً فارسی حساب می‌کرد.
+    /// </summary>
+    private static bool IsDottedPersianText(string word)
     {
-        foreach (var suffix in DomainSuffixes)
+        var parts = word.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2)
+            return false;
+
+        foreach (var part in parts)
         {
-            if (text.Length > suffix.Length &&
-                text.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-                return true;
+            // بخشِ دوحرفی فقط اگر از واژه‌های پرکاربرد باشد؛ ورودی‌های دوحرفیِ لغت‌نامه
+            // بیشترشان نویزند و با پسوندهای دوحرفیِ دامنه تداخل می‌کنند («of.tv» → «خب.فر»)
+            var known = part.Length == 2
+                ? CommonTwoLetterPersian.Contains(part)
+                : IsKnownPersianWord(part);
+
+            if (!known)
+                return false;
         }
-        return false;
+
+        return true;
     }
 
     /// <summary>نام سایت با یا بدون www. و پسوند دامنه (مثل digikala یا www.digikala.com)</summary>
     private static bool IsKnownSiteName(string ascii)
     {
-        var core = ascii;
+        var core = HostPart(ascii);
 
         if (core.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
             core = core[4..];
 
-        foreach (var suffix in DomainSuffixes)
-        {
-            if (core.Length > suffix.Length &&
-                core.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-            {
-                core = core[..^suffix.Length];
-                break;
-            }
-        }
+        // پسوند را از انتها جدا می‌کنیم تا هستهٔ نام بماند (digikala.com → digikala)
+        while (core.LastIndexOf('.') is var dot && dot > 0 && KnownTlds.Contains(core[(dot + 1)..]))
+            core = core[..dot];
 
         return core.Length >= 3 && SiteNames.Contains(core);
+    }
+
+    /// <summary>
+    /// آیا این توکن، بی‌آنکه بدانیم آغازِ کلمه است، به‌اندازهٔ کافی ایمن است که
+    /// اصلاح شود؟ پایانِ کلماتِ انگلیسی («ing»، «ther») و تکه‌های کوتاه نه؛ توکنِ
+    /// بلند یا توکنی که شکلِ کلمهٔ انگلیسی ندارد («o,f» → «خوب») بله.
+    /// </summary>
+    private static bool IsSafeUnanchored(string word) =>
+        !EnglishWordEndings.Contains(word)
+        && (word.Length >= MinUnanchoredLength || HasNonEnglishWordShape(word));
+
+    /// <summary>
+    /// آیا این توکنِ ASCII نشانه‌ای دارد که داخلِ یک کلمهٔ انگلیسی دیده نمی‌شود؟
+    ///
+    /// حروفِ «و ک گ ج چ» روی کلیدهای «, ; ' [ ]» می‌نشینند، پس «o,f» («خوب») هیچ‌گاه
+    /// پایانِ یک کلمهٔ انگلیسی نیست و بی‌خطر اصلاح می‌شود. حرفِ بزرگ در میانهٔ توکن هم
+    /// همین معنی را دارد (Shift برای «آ»، «ژ» و ... زده شده است).
+    /// </summary>
+    private static bool HasNonEnglishWordShape(string word)
+    {
+        for (var i = 0; i < word.Length; i++)
+        {
+            var ch = word[i];
+            if (!char.IsAsciiLetter(ch))
+                return true;
+
+            if (i > 0 && char.IsAsciiLetterUpper(ch))
+                return true;
+        }
+
+        return false;
     }
 
     private static bool IsEnglishCommaList(string word)

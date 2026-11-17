@@ -6,10 +6,16 @@ namespace TanbalType;
 internal static class NativeMethods
 {
     public const int WhKeyboardLl = 13;
+    public const int WhMouseLl = 14;
     public const int WmKeydown = 0x0100;
     public const int WmSysKeydown = 0x0104;
     public const int WmKeyup = 0x0101;
     public const int WmSysKeyup = 0x0105;
+
+    public const int WmLButtonDown = 0x0201;
+    public const int WmRButtonDown = 0x0204;
+    public const int WmMButtonDown = 0x0207;
+    public const int WmXButtonDown = 0x020B;
 
     public const uint VkBack = 0x08;
     public const uint VkTab = 0x09;
@@ -18,6 +24,12 @@ internal static class NativeMethods
     public const uint VkControl = 0x11;
     public const uint VkMenu = 0x12;
     public const uint VkCapital = 0x14;
+    public const uint VkEscape = 0x1B;
+    // کلیدهای جهت و صفحه پشتِ‌سرهم‌اند: از Page Up (0x21) تا Down (0x28)
+    public const uint VkPrior = 0x21;
+    public const uint VkDown = 0x28;
+    public const uint VkInsert = 0x2D;
+    public const uint VkDelete = 0x2E;
     public const uint VkLwin = 0x5B;
     public const uint VkRwin = 0x5C;
     public const uint VkF10 = 0x79;
@@ -35,6 +47,8 @@ internal static class NativeMethods
     public static readonly IntPtr SyntheticMarker = new(0x0041464B);
 
     public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    public delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct KbdLlHookStruct
@@ -69,6 +83,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool UnhookWindowsHookEx(IntPtr hhk);

@@ -32,7 +32,10 @@ internal static class DetectorSelfTest
          "شد", "یخ", "هدف", "خب", "مخزن", "اثاث", "زهد", "مخل",
          // واژه‌های واقعی فارسی که با نام سایت تداخل داشتند و عمداً حفظ شدند
          "فر", "هل", "شخم", "نشمه", "مل", "نهش", "دهنش", "بش",
-         "آقا", "آب", "آمد", "آدرس", "آموزش", "آقای"];
+         "آقا", "آب", "آمد", "آدرس", "آموزش", "آقای",
+         // دو واژهٔ فارسی که با نقطه به هم چسبیده‌اند (فاصله جا افتاده): شکلِ دامنه دارند
+         // ولی آدرس نیستند. بی‌گاردِ IsDottedPersianText، «سلام.شب» می‌شد sghl.af
+         "سلام.شب", "درست.من", "میشه.بعد"];
 
     // نام سایت‌های متداول که نباید روی حالت انگلیسی به فارسی تبدیل شوند
     private static readonly string[] SiteNamesShouldNotFix =
@@ -47,6 +50,24 @@ internal static class DetectorSelfTest
     private static readonly string[] DigitTokensShouldNotFix =
         ["1234", "pass123", "admin2024", "user1", "sar12", "P@ss1",
          "۱۲۳۴", "رمز۱۲۳", "شسق۲۰۲۴"];
+
+    // تکه‌هایی که کاربر در ادامهٔ متنِ قبلی می‌نویسد، آن‌جا که آغازِ کلمه معلوم نیست
+    // (پنجره عوض شده، ماوس کلیک شده، برنامه تازه بالا آمده). «engineer» از قبل نوشته
+    // شده و کاربر «ing» را به آن می‌چسباند: هیچ‌کدامِ این‌ها نباید اصلاح شوند.
+    private static readonly string[] EnFragmentsShouldNotFix =
+        ["ing", "ings", "ng", "ngs", "nd", "ed", "er", "ment", "tion", "ness", "ther",
+         "nal", "tal", "ral", "ial", "ard", "ase", "oad", "kly", "tand", "bility"];
+
+    private static readonly string[] FaFragmentsShouldNotFix =
+        ["اث" /* احداث */, "ائره" /* دائره */, "ابخش" /* تسلابخش */, "اشقی" /* عاشقی */,
+         "اشسته" /* ناشسته */, "ادشاه" /* پادشاه */, "اعده" /* قاعده */, "امعه" /* جامعه */,
+         "تخاب" /* انتخاب */, "ایعه" /* شایعه */, "اصره" /* محاصره */];
+
+    // کلمه‌های کاملی که با نامعلوم‌بودنِ آغازِ کلمه هم باید اصلاح شوند: کاربر روی
+    // کادرِ خالی کلیک کرده و همین یک کلمه را نوشته است.
+    private static readonly string[] UnanchoredShouldStillFix =
+        ["sghl" /* سلام */, "o,f" /* خوب */, "lvsd" /* مرسی */, "]x,vd" /* چطوری */,
+         "fvkhli" /* برنامه */, "nvsj" /* درست */, "h,;d" /* اوکی */, "ldo,hil" /* میخواهم */];
 
     private static readonly string[] EnglishShouldNotFix =
         ["performance", "analysis", "project", "experience", "authentication", "shopping", "slam",
@@ -63,7 +84,12 @@ internal static class DetectorSelfTest
          "sand", "milk", "silk", "wild", "mild", "valid", "solid", "civil", "legal", "guard",
          "yard", "tall", "hull", "hell", "held", "told", "toll", "fold", "grid", "lan",
          "possibility", "probability", "stability", "flexibility", "roughly", "thoroughly",
-         "dns", "msg", "ghz", "rand", "via", "aug", "fig", "gel", "lid", "cia", "hung"];
+         "dns", "msg", "ghz", "rand", "via", "aug", "fig", "gel", "lid", "cia", "hung",
+         // سویپ روی کل فرهنگ املاییِ انگلیسی (hunspell en-US) — هر ۲۵ موردِ
+         // ENGLISH_COLLISION_JUNK_2 این‌جا قفل می‌شوند تا دوباره فارسی نشوند
+         "aid", "shy", "gut", "hut", "jug", "jot", "lag", "lax", "fad", "foe", "cog", "hid",
+         "avid", "fond", "hail", "nail", "raid", "rail", "laid", "slid", "fail", "rival",
+         "soda", "skid", "anvil"];
 
     public static void RunAndLog()
     {
@@ -124,6 +150,36 @@ internal static class DetectorSelfTest
                 || Detector.DetectWrongLayout(word, currentLayoutIsPersian: false) is not null)
             {
                 AppLog.Write($"SelfTest digit false-positive: {word}");
+                failed++;
+            }
+        }
+
+        // ---- آغازِ کلمه نامعلوم است: فقط شواهدِ قطعی باید اصلاح شوند ----
+        foreach (var frag in EnFragmentsShouldNotFix)
+        {
+            if (Detector.DetectWrongLayout(frag, currentLayoutIsPersian: false, wordStartKnown: false) is { } fixedTo)
+            {
+                AppLog.Write($"SelfTest unanchored EN fragment: {frag} -> '{fixedTo}'");
+                failed++;
+            }
+        }
+
+        foreach (var frag in FaFragmentsShouldNotFix)
+        {
+            if (Detector.DetectWrongLayout(frag, currentLayoutIsPersian: true, wordStartKnown: false) is { } fixedTo)
+            {
+                AppLog.Write($"SelfTest unanchored FA fragment: {frag} -> '{fixedTo}'");
+                failed++;
+            }
+        }
+
+        foreach (var keys in UnanchoredShouldStillFix)
+        {
+            var expected = Mapper.EnKeysToPersian(keys);
+            var got = Detector.DetectWrongLayout(keys, currentLayoutIsPersian: false, wordStartKnown: false);
+            if (got != expected)
+            {
+                AppLog.Write($"SelfTest unanchored word FAIL: {keys} -> '{got}' (expect {expected})");
                 failed++;
             }
         }

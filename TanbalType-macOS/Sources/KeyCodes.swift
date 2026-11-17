@@ -8,6 +8,25 @@ enum KeyCodes {
     static let delete: UInt16 = 51 // Backspace
     static let keypadEnter: UInt16 = 76
     static let f10: UInt16 = 109
+    static let escape: UInt16 = 53
+    static let help: UInt16 = 114 // جای Insert روی کیبوردهای کامل
+    static let home: UInt16 = 115
+    static let pageUp: UInt16 = 116
+    static let forwardDelete: UInt16 = 117
+    static let end: UInt16 = 119
+    static let pageDown: UInt16 = 121
+    static let leftArrow: UInt16 = 123
+    static let rightArrow: UInt16 = 124
+    static let downArrow: UInt16 = 125
+    static let upArrow: UInt16 = 126
+
+    /// کلیدهایی که مکان‌نما را جابه‌جا می‌کنند (جهت‌ها، Home/End، Page Up/Down) یا متنِ اطرافش
+    /// را عوض می‌کنند (Forward Delete/Insert) و همگامیِ بافر را از بین می‌برند.
+    static let caretMoving: Set<UInt16> = [
+        KeyCodes.escape, KeyCodes.help, KeyCodes.home, KeyCodes.pageUp, KeyCodes.forwardDelete,
+        KeyCodes.end, KeyCodes.pageDown,
+        KeyCodes.leftArrow, KeyCodes.rightArrow, KeyCodes.downArrow, KeyCodes.upArrow,
+    ]
 
     struct USKey {
         let code: UInt16

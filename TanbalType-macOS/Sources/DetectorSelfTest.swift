@@ -16,6 +16,7 @@ enum DetectorSelfTest {
 
         Mapper.useWindowsLayout()
         let persianTargets = DetectorData.persianOnEnLayout.map(Mapper.enKeysToPersian)
+        let unanchoredTargets = DetectorData.unanchoredShouldStillFix.map(Mapper.enKeysToPersian)
 
         // نگاشت ویندوز همیشه آزموده می‌شود؛ به‌علاوهٔ چیدمان‌های مکِ خواسته‌شده
         var layouts: [(String, () -> Void)] = [("windows", { Mapper.useWindowsLayout() })]
@@ -27,7 +28,8 @@ enum DetectorSelfTest {
         for (name, activate) in layouts {
             activate()
             let before = failed
-            failed += runCases(persianTargets: persianTargets)
+            failed += runCases(persianTargets: persianTargets,
+                               unanchoredTargets: unanchoredTargets)
             AppLog.write("SelfTest [\(name)]: \(failed - before) failure(s)")
         }
 
@@ -43,7 +45,7 @@ enum DetectorSelfTest {
         return failed
     }
 
-    private static func runCases(persianTargets: [String]) -> Int {
+    private static func runCases(persianTargets: [String], unanchoredTargets: [String]) -> Int {
         var failed = 0
 
         for word in DetectorData.englishOnFaLayout {
@@ -88,6 +90,36 @@ enum DetectorSelfTest {
             || Detector.detectWrongLayout(word, currentLayoutIsPersian: false) != nil {
             AppLog.write("SelfTest digit false-positive: \(word)")
             failed += 1
+        }
+
+        // ------------------------------------------------ آغازِ کلمه نامعلوم است
+        // کاربر در ادامهٔ متنی که از قبل آن‌جا بوده تایپ کرده (برنامه عوض شده، ماوس کلیک شده،
+        // کلیدِ جهتی زده شده یا برنامه تازه بالا آمده). تکهٔ پایانیِ یک کلمه نباید اصلاح شود،
+        // ولی کلمهٔ کاملی که کاربر روی کادرِ خالی نوشته باید اصلاح شود.
+        for frag in DetectorData.enFragmentsShouldNotFix {
+            if let fixed = Detector.detectWrongLayout(frag, currentLayoutIsPersian: false,
+                                                      wordStartKnown: false) {
+                AppLog.write("SelfTest unanchored EN fragment: \(frag) -> '\(fixed)'")
+                failed += 1
+            }
+        }
+
+        for frag in DetectorData.faFragmentsShouldNotFix {
+            if let fixed = Detector.detectWrongLayout(frag, currentLayoutIsPersian: true,
+                                                      wordStartKnown: false) {
+                AppLog.write("SelfTest unanchored FA fragment: \(frag) -> '\(fixed)'")
+                failed += 1
+            }
+        }
+
+        for expected in unanchoredTargets {
+            let keys = Mapper.persianToEnKeys(expected)
+            let got = Detector.detectWrongLayout(keys, currentLayoutIsPersian: false,
+                                                 wordStartKnown: false)
+            if got != expected {
+                AppLog.write("SelfTest unanchored word FAIL: \(keys) -> '\(got ?? "nil")' (expect \(expected))")
+                failed += 1
+            }
         }
 
         return failed

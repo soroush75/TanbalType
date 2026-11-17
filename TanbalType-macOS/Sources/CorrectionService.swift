@@ -16,19 +16,57 @@ final class CorrectionService {
     private var lastDelimiter: Character? // آخرین کلید جداکننده
     private let queue = DispatchQueue(label: "TanbalType.correction", qos: .userInteractive)
 
+    /// آیا می‌دانیم آنچه در بافر است از آغازِ یک کلمه شروع شده؟ یعنی پیش از آن فاصله/اینتر
+    /// بوده، نه حرفی از کلمه‌ای که از قبل آن‌جا نوشته شده است.
+    ///
+    /// بافر تنها تا زمانی با متنِ واقعیِ پیشِ مکان‌نما می‌خواند که کاربر پشتِ‌سرهم تایپ کند. با
+    /// عوض‌شدنِ برنامهٔ فعال، کلیکِ ماوس، کلیدهای جهت یا میان‌برها، مکان‌نما می‌تواند وسطِ
+    /// کلمه‌ای باشد که از قبل نوشته شده؛ آن‌وقت «ing» که کاربر به «engineer» می‌چسباند
+    /// به‌تنهایی سنجیده می‌شود و «هدل» از آن درمی‌آید. در آن حالت این پرچم false است و
+    /// `Detector` فقط شواهدِ قطعی را می‌پذیرد.
+    private var wordStartKnown = false
+
+    /// درخواستِ دورریختنِ بافر از بیرونِ مسیرِ کلیدها (کلیکِ ماوس) — توضیح در `invalidateBuffer`.
+    private var invalidateRequested = false
+
     /// با تغییر برنامهٔ فعال صدا زده می‌شود تا متنِ یک برنامه به برنامهٔ دیگر منتقل نشود.
+    ///
+    /// بافر پاک می‌شود و «آغازِ کلمه» نامعلوم می‌شود: از این پس نمی‌دانیم پیش از آنچه کاربر
+    /// می‌نویسد فاصله بوده یا حرفی از یک کلمهٔ نیمه‌تمام.
     func reset() {
         buffer = ""
         bufferLayoutIsPersian = nil
         lastDelimiter = nil
+        wordStartKnown = false
+    }
+
+    /// از بیرون (کلیکِ ماوس) خبر می‌دهد که مکان‌نما ممکن است جابه‌جا شده باشد، پس بافر و
+    /// دانستهٔ ما دربارهٔ متنِ پیشِ آن بی‌اعتبار است.
+    ///
+    /// این‌جا عمداً هیچ کارِ دیگری انجام نمی‌شود: callbackِ event tap باید بی‌درنگ برگردد،
+    /// وگرنه macOS tap را غیرفعال می‌کند (و بارِ اولِ خواندنِ لغت‌نامه — ۳۳۲ هزار واژه — ده‌ها
+    /// میلی‌ثانیه طول می‌کشد). پس فقط یک پرچم ست می‌شود که در کلیدِ بعدی اعمال می‌شود.
+    func invalidateBuffer() {
+        invalidateRequested = true
     }
 
     /// خروجی true یعنی رویداد باید مصرف شود (به برنامهٔ فعال نرسد).
     func handleKeyDown(_ event: CGEvent) -> Bool {
         guard enabled, !isCorrecting else { return false }
 
+        // کلیکِ ماوس از مسیرِ دیگری خبر داده است؛ همین‌جا — نه داخلِ خودِ callback — بافر دور
+        // ریخته می‌شود.
+        if invalidateRequested {
+            invalidateRequested = false
+            reset()
+        }
+
         let flags = event.flags
         if flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate) {
+            // میان‌بر (Cmd/Ctrl/Option + …) هر کاری می‌تواند بکند — چسباندن، undo، انتخابِ همه،
+            // تعویضِ زبان — پس پس از آن معلوم نیست چه متنی پیشِ مکان‌نما نشسته است.
+            // (فشردنِ تنهای modifier رویدادِ flagsChanged است و اصلاً به این‌جا نمی‌رسد.)
+            invalidateBuffer()
             return false
         }
 
@@ -36,6 +74,8 @@ final class CorrectionService {
         if IsSecureEventInputEnabled() {
             buffer = ""
             bufferLayoutIsPersian = nil
+            // آنچه کاربر در کادر رمز زده را نشمرده‌ایم، پس آغازِ کلمهٔ بعدی نامعلوم است
+            wordStartKnown = false
             return false
         }
 
@@ -55,21 +95,35 @@ final class CorrectionService {
                     bufferLayoutIsPersian = nil
                 }
             } else {
-                // کلمه پاک شد و به فضای خالی رسیدیم؛ حافظهٔ جداکنندهٔ قبلی ریست می‌شود
+                // پاک‌کردن از پیشِ بافر: آن حرف را ما نشمرده‌ایم، پس نه می‌دانیم چه بوده و نه
+                // چه چیزی پیش‌تر از آن مانده است
                 lastDelimiter = nil
+                wordStartKnown = false
             }
+            return false
+        }
+
+        // کلیدهای جهت و ویرایش، مکان‌نما را جابه‌جا می‌کنند یا متنِ اطرافش را عوض می‌کنند؛
+        // از آن پس بافر با متنِ پیشِ مکان‌نما نمی‌خواند.
+        if KeyCodes.caretMoving.contains(code) {
+            reset()
             return false
         }
 
         if let delimiter = Self.delimiter(for: code) {
             let layoutIsPersian = bufferLayoutIsPersian ?? persian
             let word = buffer
+            let wordStartWasKnown = wordStartKnown
             buffer = ""
             bufferLayoutIsPersian = nil
 
-            let corrected = maybeCorrect(word, layoutIsPersian: layoutIsPersian)
+            // این جداکننده خودش مرزِ کلمه است، پس آغازِ کلمهٔ بعدی معلوم است.
+            wordStartKnown = true
+
+            let corrected = maybeCorrect(word, layoutIsPersian: layoutIsPersian,
+                                         wordStartKnown: wordStartWasKnown)
             // توجه: با فعال‌بودن log، متن تایپ‌شده هم ذخیره می‌شود (برای عیب‌یابی).
-            AppLog.write("Delimiter key=\(code) layout=\(layoutIsPersian ? "fa" : "en") word='\(word)' -> '\(corrected ?? word)'")
+            AppLog.write("Delimiter key=\(code) layout=\(layoutIsPersian ? "fa" : "en") start=\(wordStartWasKnown ? "known" : "unknown") word='\(word)' -> '\(corrected ?? word)'")
 
             // آیا کلمهٔ قبلی واقعاً با Space جدا شده است یا مثلاً با Enter (اول خط)
             let replacePrevSpace = lastDelimiter == " "
@@ -119,11 +173,13 @@ final class CorrectionService {
         return Mapper.enKeysToPersian(String(physical)).first
     }
 
-    private func maybeCorrect(_ word: String, layoutIsPersian: Bool) -> String? {
+    private func maybeCorrect(_ word: String, layoutIsPersian: Bool,
+                              wordStartKnown: Bool) -> String? {
         if word.trimmingCharacters(in: .whitespaces).isEmpty || word.count < 2 {
             return nil
         }
-        let corrected = Detector.detectWrongLayout(word, currentLayoutIsPersian: layoutIsPersian)
+        let corrected = Detector.detectWrongLayout(word, currentLayoutIsPersian: layoutIsPersian,
+                                                   wordStartKnown: wordStartKnown)
         return corrected == word ? nil : corrected
     }
 

@@ -12,8 +12,13 @@
       }
     ],
     "configProperties": {
+      "System.Diagnostics.Tracing.EventSource.IsSupported": false,
+      "System.Globalization.Invariant": true,
+      "System.Globalization.PredefinedCulturesOnly": true,
       "System.Reflection.Metadata.MetadataUpdater.IsSupported": false,
-      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": true
+      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": true,
+      "System.Runtime.TieredPGO": true,
+      "System.Threading.Thread.EnableAutoreleasePool": false
     }
   }
 }

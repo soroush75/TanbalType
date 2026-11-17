@@ -205,9 +205,10 @@ class Daemon:
             if kind != evdev.EV_KEY:
                 continue
             if 0x100 <= code < 0x160:
-                # دکمه‌های موس/تاچ‌پد
+                # دکمه‌های موس/تاچ‌پد: یک کلیک می‌تواند مکان‌نما را وسط یا انتهای کلمه‌ای که از
+                # قبل نوشته شده ببرد، پس بافر بی‌اعتبار می‌شود (در کلیدِ بعدی اعمال می‌شود)
                 if value == 1:
-                    self.corrector.reset_pointer()
+                    self.corrector.invalidate_buffer()
                 continue
             if not dev.is_keyboard:
                 continue

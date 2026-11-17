@@ -44,7 +44,9 @@ build, name = sys.argv[1:3]
 def clean(info):
     info.uid = info.gid = 0
     info.uname = info.gname = 'root'
-    if '__pycache__' in info.name or info.name.endswith('.DS_Store'):
+    base = info.name.rsplit('/', 1)[-1]
+    # «._x» فایلِ AppleDouble ساختهٔ macOS است؛ مثل __pycache__ و .DS_Store زائد است
+    if '__pycache__' in info.name or base.startswith('._') or base in ('.DS_Store', 'Thumbs.db'):
         return None
     if info.isfile():
         info.mode = 0o755 if info.name.endswith(('.sh', '/tanbaltype.sh')) else 0o644

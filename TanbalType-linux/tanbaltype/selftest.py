@@ -16,6 +16,7 @@ def run(layouts=None):
 
     mapper.use_windows_layout()
     persian_targets = [mapper.en_keys_to_persian(w) for w in DATA['persianOnEnLayout']]
+    unanchored_targets = [mapper.en_keys_to_persian(w) for w in DATA['unanchoredShouldStillFix']]
 
     if layouts is None:
         layouts = list(keymaps.PERSIAN_LAYOUTS)
@@ -25,7 +26,7 @@ def run(layouts=None):
             mapper.use_windows_layout()
         else:
             mapper.configure(name)
-        count = _run_cases(persian_targets)
+        count = _run_cases(persian_targets, unanchored_targets)
         failed += count
         applog.write('SelfTest [%s]: %d failure(s)' % (name, count))
 
@@ -37,7 +38,7 @@ def run(layouts=None):
     return failed
 
 
-def _run_cases(persian_targets):
+def _run_cases(persian_targets, unanchored_targets):
     failed = 0
     detect = detector.detect_wrong_layout
 
@@ -74,6 +75,30 @@ def _run_cases(persian_targets):
     for word in DATA['digitTokensShouldNotFix']:
         if detect(word, True) is not None or detect(word, False) is not None:
             applog.write('SelfTest digit false-positive: %s' % word)
+            failed += 1
+
+    # ------------------------------------------------ آغازِ کلمه نامعلوم است
+    # کاربر در ادامهٔ متنی که از قبل آن‌جا بوده تایپ کرده (پنجره عوض شده، ماوس کلیک شده،
+    # کلیدِ جهتی زده شده یا برنامه تازه بالا آمده). تکهٔ پایانیِ یک کلمه نباید اصلاح شود،
+    # ولی کلمهٔ کاملی که کاربر روی کادرِ خالی نوشته باید اصلاح شود.
+    for frag in DATA['enFragmentsShouldNotFix']:
+        fixed = detect(frag, False, False)
+        if fixed is not None:
+            applog.write('SelfTest unanchored EN fragment: %s -> %r' % (frag, fixed))
+            failed += 1
+
+    for frag in DATA['faFragmentsShouldNotFix']:
+        fixed = detect(frag, True, False)
+        if fixed is not None:
+            applog.write('SelfTest unanchored FA fragment: %s -> %r' % (frag, fixed))
+            failed += 1
+
+    for expected in unanchored_targets:
+        keys = mapper.persian_to_en_keys(expected)
+        got = detect(keys, False, False)
+        if got != expected:
+            applog.write('SelfTest unanchored word FAIL: %s -> %r (expect %s)'
+                         % (keys, got, expected))
             failed += 1
 
     return failed

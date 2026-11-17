@@ -192,10 +192,12 @@ class CorrectorTest(unittest.TestCase):
         self.assertTrue(h.corrector.enabled)
 
     def test_shift_letter(self):
-        # «آقا» روی چیدمان pes با Shift+H
+        # «آقا» روی چیدمان pes با Shift+H.
+        # فاصلهٔ اول مرزِ کلمه را معلوم می‌کند؛ بی‌آن، کلمهٔ سه‌حرفی مثل نسخهٔ ویندوز به‌عنوان
+        # تکهٔ ناتمام رد می‌شود (test_short_word_unknown_start_at_startup)
         h = Harness()
-        h.type_physical('Hrh ')
-        self.assertEqual(h.screen.text, 'آقا ')
+        h.type_physical(' Hrh ')
+        self.assertEqual(h.screen.text, ' آقا ')
 
     def test_caps_lock_english_output(self):
         h = Harness(start_persian=True)
@@ -223,6 +225,78 @@ class CorrectorTest(unittest.TestCase):
         h = Harness()
         h.type_physical('sghl123 ')
         self.assertEqual(h.screen.text, 'sghl123 ')
+
+    # ------------------------------------------------ آغازِ کلمه معلوم است یا نه
+
+    def test_short_word_unknown_start_at_startup(self):
+        # برنامه تازه بالا آمده: نمی‌دانیم پیش از آنچه کاربر می‌نویسد فاصله بوده یا حرفی از
+        # کلمه‌ای نیمه‌تمام، پس تکهٔ کوتاه دست‌نخورده می‌ماند
+        h = Harness()
+        h.type_physical('Hrh ')
+        self.assertEqual(h.screen.text, 'Hrh ')
+
+    def test_whole_word_fixed_even_with_unknown_start(self):
+        # کلمهٔ کامل شاهدِ قطعی است و با نامعلوم‌بودنِ آغازِ کلمه هم اصلاح می‌شود
+        h = Harness()
+        h.type_physical('sghl ')
+        self.assertEqual(h.screen.text, 'سلام ')
+
+    def test_mouse_click_invalidates_buffer(self):
+        # کلیک می‌تواند مکان‌نما را وسط یا انتهای کلمه‌ای که از قبل نوشته شده ببرد؛
+        # از آن پس بافر با متنِ پیشِ مکان‌نما نمی‌خواند
+        h = Harness()
+        h.type_physical(' sg')
+        h.corrector.invalidate_buffer()
+        h.type_physical('hl ')
+        self.assertEqual(h.screen.text, ' sghl ')
+
+    def test_mouse_click_applied_on_next_key_only(self):
+        # هندلرِ ماوس فقط پرچم ست می‌کند؛ بافر در کلیدِ بعدی دور ریخته می‌شود
+        h = Harness()
+        h.type_physical(' sg')
+        h.corrector.invalidate_buffer()
+        self.assertEqual(len(h.corrector._buffer), 2)
+        h.type_physical('h')
+        self.assertEqual(len(h.corrector._buffer), 1)
+
+    def test_arrow_key_invalidates_buffer(self):
+        h = Harness()
+        h.type_physical(' sg')
+        h.key(keymaps.KEY_LEFT)
+        h.key(keymaps.KEY_RIGHT)
+        h.type_physical('hl ')
+        self.assertEqual(h.screen.text, ' sghl ')
+
+    def test_delete_key_invalidates_buffer(self):
+        h = Harness()
+        h.type_physical(' sg')
+        h.key(keymaps.KEY_DELETE)
+        h.type_physical('hl ')
+        self.assertEqual(h.screen.text, ' sghl ')
+
+    def test_backspace_past_buffer_makes_start_unknown(self):
+        # حرفی که ما نشمرده‌ایم پاک شده: نه می‌دانیم چه بوده و نه چه چیزی پیش‌تر از آن مانده
+        h = Harness()
+        h.type_physical(' ')
+        h.key(keymaps.KEY_BACKSPACE)
+        h.type_physical('Hrh ')
+        self.assertEqual(h.screen.text, 'Hrh ')
+
+    def test_language_switch_shortcut_keeps_buffer(self):
+        # Alt+Shift (تعویض زبان) فقط modifier است و نباید بافر را پاک کند
+        h = Harness()
+        h.type_physical(' sg')
+        for code in (keymaps.KEY_LEFTALT, keymaps.KEY_LEFTSHIFT):
+            h.key(code, 1)
+        for code in (keymaps.KEY_LEFTSHIFT, keymaps.KEY_LEFTALT):
+            h.key(code, 0)
+        h.type_physical('hl ')
+        self.assertEqual(h.screen.text, ' سلام ')
+
+    def test_caret_keys_are_known(self):
+        # هر کلیدِ CARET_KEYS از شاخهٔ ریست عبور می‌کند (هیچ‌کدام کلیدِ حرفی نیست)
+        self.assertFalse(keymaps.CARET_KEYS & keymaps.CHAR_KEYS)
+        self.assertFalse(keymaps.CARET_KEYS & keymaps.MODIFIERS)
 
 
 if __name__ == '__main__':
